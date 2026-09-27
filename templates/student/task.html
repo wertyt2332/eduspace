@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% block title %}{{ task.title }}{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb small">
+    <li class="breadcrumb-item"><a href="{{ url_for('student.dashboard') }}">Мои разделы</a></li>
+    <li class="breadcrumb-item"><a href="{{ url_for('student.section_view', section_id=section.id) }}">{{ section.title }}</a></li>
+    <li class="breadcrumb-item"><a href="{{ url_for('student.subsection_view', subsection_id=sub.id) }}">{{ sub.title }}</a></li>
+    <li class="breadcrumb-item active">{{ task.title }}</li>
+  </ol>
+</nav>
+
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+      <h1 class="h4 mb-0">
+        {% if task.task_type == 'text' %}📝
+        {% elif task.task_type == 'file' %}📎
+        {% elif task.task_type == 'test' %}✅
+        {% elif task.task_type == 'link' %}🔗
+        {% endif %}
+        {{ task.title }}
+      </h1>
+      {% if graded %}
+        <span class="badge bg-success-subtle text-success-emphasis fs-6">
+          Оценка: {{ submission.score }} / {{ task.max_score }}
+        </span>
+      {% elif overdue %}
+        <span class="badge bg-danger-subtle text-danger-emphasis">просрочено</span>
+      {% endif %}
+    </div>
+    <div class="text-muted small mt-2">
+      Макс. балл: <strong>{{ task.max_score }}</strong>
+      {% if task.deadline %}
+        · Дедлайн: <strong>{{ task.deadline.strftime('%d.%m.%Y %H:%M') }}</strong>
+      {% else %}
+        · Без дедлайна
+      {% endif %}
+    </div>
+    {% if task.description %}
+      <hr>
+      <div style="white-space: pre-wrap;">{{ task.description }}</div>
+    {% endif %}
+  </div>
+</div>
+
+{% if locked %}
+  <div class="card border-0 shadow-sm">
+    <div class="card-body">
+      <h2 class="h6 text-uppercase text-muted mb-3">Ваш ответ</h2>
+
+      {% if task.task_type == 'test' %}
+        {% set selected = (submission.content|from_json) if submission and submission.content else [] %}
+        <ul class="mb-0">
+          {% for o in options %}
+            <li>
+              {{ o.text }}
+              {% if loop.index0 in selected %}
+                <span class="badge bg-primary-subtle text-primary-emphasis">ваш выбор</span>
+              {% endif %}
+              {% if o.correct %}
+                <span class="badge bg-success-subtle text-success-emphasis">правильный</span>
+              {% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      {% elif task.task_type == 'file' %}
+        {% if submission and submission.file_url %}
+          <a href="{{ submission.file_url }}" target="_blank" class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-download"></i> Скачать ваш файл
+          </a>
+        {% else %}
+          <span class="text-muted">Файл не загружен.</span>
+        {% endif %}
+      {% elif task.task_type == 'link' %}
+        {% if submission %}
+          <a href="{{ submission.content }}" target="_blank" rel="noopener">{{ submission.content }}</a>
+        {% endif %}
+      {% else %}
+        {% if submission %}
+          <div class="border rounded p-3 bg-light" style="white-space: pre-wrap;">{{ submission.content }}</div>
+        {% endif %}
+      {% endif %}
+
+      {% if submission and submission.comment %}
+        <hr>
+        <div class="small text-muted mb-1">Комментарий учителя:</div>
+        <div class="fst-italic">{{ submission.comment }}</div>
+      {% endif %}
+
+      {% if overdue and not graded %}
+        <div class="alert alert-warning mt-3 mb-0">
+          <i class="bi bi-exclamation-triangle"></i>
+          Дедлайн прошёл — изменить ответ нельзя.
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+{% else %}
+  <div class="card border-0 shadow-sm">
+    <div class="card-body">
+      <h2 class="h6 text-uppercase text-muted mb-3">
+        {{ 'Изменить ответ' if submission else 'Ваш ответ' }}
+      </h2>
+
+      <form method="post" enctype="multipart/form-data">
+
+        {% if task.task_type == 'text' %}
+          <div class="mb-3">
+            <textarea name="content" rows="6" class="form-control" required
+                      placeholder="Введите ответ...">{{ submission.content if submission else '' }}</textarea>
+          </div>
+
+        {% elif task.task_type == 'link' %}
+          <div class="mb-3">
+            <input name="link" type="url" class="form-control" required
+                   placeholder="https://..."
+                   value="{{ submission.content if submission else '' }}">
+          </div>
+
+        {% elif task.task_type == 'file' %}
+          {% if submission and submission.file_url %}
+            <div class="mb-3">
+              <div class="text-muted small mb-1">Уже загружен:</div>
+              <a href="{{ submission.file_url }}" target="_blank">{{ submission.file_url.split('/')[-1] }}</a>
+            </div>
+          {% endif %}
+          <div class="mb-3">
+            <label class="form-label">
+              {{ 'Заменить файл' if submission and submission.file_url else 'Файл' }}
+            </label>
+            <input name="file" type="file" class="form-control">
+            <div class="form-text">PDF, DOC, DOCX, TXT, RTF, ODT, JPG, PNG, GIF, WEBP. Макс. 20 МБ.</div>
+          </div>
+
+        {% elif task.task_type == 'test' %}
+          {% set selected = (submission.content|from_json) if submission and submission.content else [] %}
+          {% set multi = (options | selectattr('correct') | list | length) > 1 %}
+          <p class="text-muted small">
+            {{ 'Выберите несколько вариантов' if multi else 'Выберите один вариант' }}
+          </p>
+          <div class="mb-3">
+            {% for o in options %}
+              <div class="form-check">
+                <input class="form-check-input" type="{{ 'checkbox' if multi else 'radio' }}"
+                       name="answer" value="{{ loop.index0 }}" id="ans{{ loop.index0 }}"
+                       {{ 'checked' if loop.index0 in selected }}>
+                <label class="form-check-label" for="ans{{ loop.index0 }}">{{ o.text }}</label>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        <button class="btn btn-primary">
+          <i class="bi bi-send"></i> {{ 'Обновить ответ' if submission else 'Отправить' }}
+        </button>
+      </form>
+    </div>
+  </div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}{{ sub.title }}{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb small">
+    <li class="breadcrumb-item"><a href="{{ url_for('teacher.dashboard') }}">Кабинет</a></li>
+    <li class="breadcrumb-item"><a href="{{ url_for('teacher.section_view', section_id=section.id) }}">{{ section.title }}</a></li>
+    <li class="breadcrumb-item active">{{ sub.title }}</li>
+  </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  <h1 class="h3 mb-0">
+    {{ sub.title }}
+    {% if not sub.is_visible %}<span class="badge bg-secondary ms-2">скрыт</span>{% endif %}
+  </h1>
+  <a href="{{ url_for('teacher.task_new', subsection_id=sub.id) }}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-lg"></i> Задание
+  </a>
+</div>
+
+{% if sub.description %}<p class="text-muted">{{ sub.description }}</p>{% endif %}
+
+{% if sub.tasks %}
+  <div class="row g-3">
+    {% for t in sub.tasks %}
+      <div class="col-md-6">
+        <div class="card border-0 shadow-sm h-100 {{ '' if t.is_visible else 'opacity-75' }}">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <h5 class="card-title mb-0">
+                {% if t.task_type == 'text' %}📝
+                {% elif t.task_type == 'file' %}📎
+                {% elif t.task_type == 'test' %}✅
+                {% elif t.task_type == 'link' %}🔗
+                {% endif %}
+                {{ t.title }}
+              </h5>
+              {% if not t.is_visible %}<span class="badge bg-secondary">скрыт</span>{% endif %}
+            </div>
+            <p class="text-muted small mb-2">{{ t.description or 'Без описания' }}</p>
+            <div class="text-muted small mb-3">
+              <i class="bi bi-award"></i> макс. {{ t.max_score }}
+              {% if t.deadline %}
+                &nbsp;·&nbsp; <i class="bi bi-clock"></i> до {{ t.deadline.strftime('%d.%m.%Y %H:%M') }}
+              {% else %}
+                &nbsp;·&nbsp; <i class="bi bi-infinity"></i> без дедлайна
+              {% endif %}
+              &nbsp;·&nbsp; <i class="bi bi-inbox"></i> {{ t.submissions|length }} ответов
+            </div>
+            <div class="d-flex flex-wrap gap-1">
+              <a href="{{ url_for('teacher.task_view', task_id=t.id) }}" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-inbox"></i> Ответы
+              </a>
+              <a href="{{ url_for('teacher.task_edit', task_id=t.id) }}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-pencil"></i>
+              </a>
+              <form method="post" action="{{ url_for('teacher.task_toggle', task_id=t.id) }}" class="d-inline">
+                <button class="btn btn-sm btn-outline-secondary" title="Скрыть/показать">
+                  <i class="bi bi-eye{{ '-slash' if t.is_visible else '' }}"></i>
+                </button>
+              </form>
+              <form method="post" action="{{ url_for('teacher.task_delete', task_id=t.id) }}" class="d-inline"
+                    onsubmit="return confirm('Удалить задание «{{ t.title }}»? Ответы учеников тоже удалятся.');">
+                <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="alert alert-info">В подразделе пока нет заданий.</div>
+{% endif %}
+{% endblock %}

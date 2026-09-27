@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Новый' if not user else 'Редактирование' }}{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb small">
+    <li class="breadcrumb-item"><a href="{{ url_for('admin.dashboard') }}">Админка</a></li>
+    <li class="breadcrumb-item">
+      <a href="{{ url_for('admin.users_list', role=role) }}">
+        {{ 'Учителя' if role == 'teacher' else 'Ученики' }}
+      </a>
+    </li>
+    <li class="breadcrumb-item active">{{ 'Новый' if not user else user.full_name }}</li>
+  </ol>
+</nav>
+
+<div class="row justify-content-center">
+  <div class="col-md-7 col-lg-6">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-4">
+        <h1 class="h4 mb-4">
+          {{ 'Новый ' + ('учитель' if role == 'teacher' else 'ученик') if not user
+             else 'Редактирование: ' + user.full_name }}
+        </h1>
+
+        <form method="post">
+          <div class="mb-3">
+            <label class="form-label">ФИО</label>
+            <input name="full_name" class="form-control" required
+                   value="{{ user.full_name if user else '' }}">
+          </div>
+
+          {% if not user %}
+            <div class="mb-3">
+              <label class="form-label">Логин</label>
+              <input name="login" class="form-control" required>
+            </div>
+          {% else %}
+            <div class="mb-3">
+              <label class="form-label">Логин</label>
+              <input class="form-control" value="{{ user.login }}" disabled>
+            </div>
+          {% endif %}
+
+          <div class="mb-3">
+            <label class="form-label">
+              Пароль
+              {% if not user %}<span class="text-muted small">(оставь пустым — сгенерируется)</span>{% endif %}
+              {% if user %}<span class="text-muted small">(оставь пустым — не менять)</span>{% endif %}
+            </label>
+            <input name="password" class="form-control" placeholder="необязательно">
+          </div>
+
+          <div class="d-flex gap-2">
+            <button class="btn btn-primary">Сохранить</button>
+            <a href="{{ url_for('admin.users_list', role=role) }}" class="btn btn-outline-secondary">Отмена</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

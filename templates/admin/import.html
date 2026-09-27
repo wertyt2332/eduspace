@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}CSV-импорт{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb small">
+    <li class="breadcrumb-item"><a href="{{ url_for('admin.dashboard') }}">Админка</a></li>
+    <li class="breadcrumb-item active">CSV-импорт</li>
+  </ol>
+</nav>
+
+<div class="row justify-content-center">
+  <div class="col-md-8 col-lg-7">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-4">
+        <h1 class="h4 mb-3">Импорт пользователей из CSV</h1>
+
+        <p class="text-muted small mb-3">
+          Формат файла (первая строка — заголовки, разделитель — запятая, кодировка UTF-8):
+        </p>
+        <pre class="bg-light p-3 rounded small mb-3">full_name,login,password,role
+Иванов Иван,ivanov,,student
+Петрова Мария,petrova,pass123,teacher</pre>
+        <ul class="text-muted small">
+          <li><code>password</code> можно оставить пустым — сгенерируется автоматически</li>
+          <li><code>role</code>: <code>student</code> или <code>teacher</code></li>
+          <li>Если логин занят — строка пропускается</li>
+        </ul>
+
+        <form method="post" enctype="multipart/form-data" class="mt-3">
+          <div class="mb-3">
+            <input type="file" name="file" accept=".csv,text/csv" class="form-control" required>
+          </div>
+          <button class="btn btn-primary"><i class="bi bi-upload"></i> Импортировать</button>
+        </form>
+
+        {% if results %}
+          <hr class="my-4">
+          <h5>Созданные аккаунты</h5>
+          {% if results.created %}
+            <div class="table-responsive">
+              <table class="table table-sm align-middle">
+                <thead class="table-light">
+                  <tr><th>ФИО</th><th>Логин</th><th>Пароль</th><th>Роль</th></tr>
+                </thead>
+                <tbody>
+                  {% for full_name, login, password, role in results.created %}
+                    <tr>
+                      <td>{{ full_name }}</td>
+                      <td><code>{{ login }}</code></td>
+                      <td><code>{{ password }}</code></td>
+                      <td>{{ 'Учитель' if role == 'teacher' else 'Ученик' }}</td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+            <p class="text-muted small">Сохрани пароли — они показаны один раз.</p>
+          {% else %}
+            <p class="text-muted small">Никого не создано.</p>
+          {% endif %}
+
+          {% if results.skipped %}
+            <h5 class="mt-4">Пропущено</h5>
+            <ul class="small">
+              {% for login, reason in results.skipped %}
+                <li><code>{{ login }}</code> — {{ reason }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

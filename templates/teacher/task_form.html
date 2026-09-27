@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Новое задание' if not task else task.title }}{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb small">
+    <li class="breadcrumb-item"><a href="{{ url_for('teacher.dashboard') }}">Кабинет</a></li>
+    <li class="breadcrumb-item"><a href="{{ url_for('teacher.section_view', section_id=section.id) }}">{{ section.title }}</a></li>
+    <li class="breadcrumb-item"><a href="{{ url_for('teacher.subsection_view', subsection_id=sub.id) }}">{{ sub.title }}</a></li>
+    <li class="breadcrumb-item active">{{ 'Новое' if not task else task.title }}</li>
+  </ol>
+</nav>
+
+<div class="row justify-content-center">
+  <div class="col-md-8 col-lg-7">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-4">
+        <h1 class="h4 mb-4">{{ 'Новое задание' if not task else 'Редактирование задания' }}</h1>
+
+        <form method="post" id="task-form">
+          <div class="mb-3">
+            <label class="form-label">Название</label>
+            <input name="title" class="form-control" required value="{{ task.title if task else '' }}">
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Описание / вопрос</label>
+            <textarea name="description" rows="4" class="form-control">{{ task.description if task else '' }}</textarea>
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Тип задания</label>
+              <select name="task_type" id="task_type" class="form-select">
+                <option value="text" {{ 'selected' if task and task.task_type == 'text' }}>📝 Текст</option>
+                <option value="file" {{ 'selected' if task and task.task_type == 'file' }}>📎 Файл</option>
+                <option value="test" {{ 'selected' if task and task.task_type == 'test' }}>✅ Тест</option>
+                <option value="link" {{ 'selected' if task and task.task_type == 'link' }}>🔗 Ссылка</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Макс. балл</label>
+              <input name="max_score" type="number" min="1" class="form-control"
+                     value="{{ task.max_score if task else 5 }}">
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Дедлайн <span class="text-muted small">(оставь пустым — без дедлайна)</span></label>
+            <input name="deadline" type="datetime-local" class="form-control"
+                   value="{{ task.deadline.strftime('%Y-%m-%dT%H:%M') if task and task.deadline else '' }}">
+          </div>
+
+          <div id="test-block" class="mb-3" style="display:none;">
+            <label class="form-label d-flex justify-content-between align-items-center">
+              <span>Варианты ответа <span class="text-muted small">(отметь галочкой правильные)</span></span>
+              <button type="button" class="btn btn-sm btn-outline-secondary" onclick="addOption()">
+                <i class="bi bi-plus"></i> Добавить
+              </button>
+            </label>
+            <div id="options-list"></div>
+          </div>
+
+          <div class="d-flex gap-2">
+            <button class="btn btn-primary">Сохранить</button>
+            <a href="{{ url_for('teacher.subsection_view', subsection_id=sub.id) }}" class="btn btn-outline-secondary">Отмена</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const typeSel = document.getElementById('task_type');
+  const testBlock = document.getElementById('test-block');
+  const optionsList = document.getElementById('options-list');
+
+  const existingOptions = {{ (task.options_json|safe if task else '[]') or '[]' }};
+
+  function toggleTest() {
+    testBlock.style.display = typeSel.value === 'test' ? 'block' : 'none';
+  }
+
+  function addOption(text = '', correct = false) {
+    const div = document.createElement('div');
+    div.className = 'input-group mb-2';
+    div.innerHTML = `
+      <span class="input-group-text">
+        <input type="checkbox" name="option_correct" value="${optionsList.children.length}"
+               ${correct ? 'checked' : ''}>
+      </span>
+      <input name="option_text" class="form-control" placeholder="Вариант" value="${text.replace(/"/g,'&quot;')}">
+      <button type="button" class="btn btn-outline-danger" onclick="this.parentNode.remove()">×</button>
+    `;
+    optionsList.appendChild(div);
+  }
+
+  typeSel.addEventListener('change', toggleTest);
+  toggleTest();
+
+  if (existingOptions && existingOptions.length) {
+    existingOptions.forEach(o => addOption(o.text, o.correct));
+  } else if (typeSel.value === 'test') {
+    addOption();
+    addOption();
+  }
+</script>
+{% endblock %}

@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Состав: {{ section.title }}{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb small">
+    <li class="breadcrumb-item"><a href="{{ url_for('admin.dashboard') }}">Админка</a></li>
+    <li class="breadcrumb-item"><a href="{{ url_for('admin.sections_list') }}">Разделы</a></li>
+    <li class="breadcrumb-item active">{{ section.title }} — состав</li>
+  </ol>
+</nav>
+
+<h1 class="h3 mb-4">Состав раздела «{{ section.title }}»</h1>
+
+<form method="post">
+  <div class="row g-3">
+    <div class="col-md-6">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <h5 class="card-title mb-3"><i class="bi bi-person-badge"></i> Учителя</h5>
+          {% if all_teachers %}
+            {% for t in all_teachers %}
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="teachers" value="{{ t.id }}"
+                       id="t{{ t.id }}" {{ 'checked' if t in section.teachers }}>
+                <label class="form-check-label" for="t{{ t.id }}">
+                  {{ t.full_name }} <span class="text-muted small">({{ t.login }})</span>
+                </label>
+              </div>
+            {% endfor %}
+          {% else %}
+            <p class="text-muted small mb-0">Нет учителей. <a href="{{ url_for('admin.user_new', role='teacher') }}">Создать</a></p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <h5 class="card-title mb-3"><i class="bi bi-people"></i> Ученики</h5>
+          {% if all_students %}
+            <div style="max-height: 400px; overflow-y: auto;">
+              {% for s in all_students %}
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" name="students" value="{{ s.id }}"
+                         id="s{{ s.id }}" {{ 'checked' if s in section.students }}>
+                  <label class="form-check-label" for="s{{ s.id }}">
+                    {{ s.full_name }} <span class="text-muted small">({{ s.login }})</span>
+                  </label>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <p class="text-muted small mb-0">Нет учеников. <a href="{{ url_for('admin.user_new', role='student') }}">Создать</a></p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="d-flex gap-2 mt-4">
+    <button class="btn btn-primary">Сохранить состав</button>
+    <a href="{{ url_for('admin.sections_list') }}" class="btn btn-outline-secondary">Отмена</a>
+  </div>
+</form>
+{% endblock %}

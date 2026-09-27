@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}{{ section.title }}{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb small">
+    <li class="breadcrumb-item"><a href="{{ url_for('teacher.dashboard') }}">Кабинет</a></li>
+    <li class="breadcrumb-item active">{{ section.title }}</li>
+  </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  <h1 class="h3 mb-0">{{ section.title }}</h1>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('teacher.section_students', section_id=section.id) }}"
+       class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-people"></i> Ученики ({{ section.students|length }})
+    </a>
+    <a href="{{ url_for('teacher.subsection_new', section_id=section.id) }}"
+       class="btn btn-primary btn-sm">
+      <i class="bi bi-plus-lg"></i> Подраздел
+    </a>
+  </div>
+</div>
+
+{% if section.description %}
+  <p class="text-muted">{{ section.description }}</p>
+{% endif %}
+
+{% if section.subsections %}
+  <div class="row g-3">
+    {% for sub in section.subsections %}
+      <div class="col-12">
+        <div class="card border-0 shadow-sm {{ '' if sub.is_visible else 'opacity-75' }}">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+              <div>
+                <h5 class="card-title mb-1">
+                  <a href="{{ url_for('teacher.subsection_view', subsection_id=sub.id) }}"
+                     class="text-decoration-none text-dark">
+                    {{ sub.title }}
+                  </a>
+                  {% if not sub.is_visible %}
+                    <span class="badge bg-secondary ms-2">скрыт</span>
+                  {% endif %}
+                </h5>
+                <p class="text-muted small mb-1">{{ sub.description or 'Без описания' }}</p>
+                <div class="text-muted small">
+                  <i class="bi bi-journal-check"></i> {{ sub.tasks|length }} заданий
+                </div>
+              </div>
+              <div class="d-flex flex-wrap gap-1">
+                <a href="{{ url_for('teacher.subsection_view', subsection_id=sub.id) }}"
+                   class="btn btn-sm btn-outline-primary">
+                  <i class="bi bi-box-arrow-in-right"></i> Открыть
+                </a>
+                <a href="{{ url_for('teacher.subsection_edit', subsection_id=sub.id) }}"
+                   class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i></a>
+                <form method="post" action="{{ url_for('teacher.subsection_toggle', subsection_id=sub.id) }}" class="d-inline">
+                  <button class="btn btn-sm btn-outline-secondary" title="Скрыть/показать">
+                    <i class="bi bi-eye{{ '-slash' if sub.is_visible else '' }}"></i>
+                  </button>
+                </form>
+                <form method="post" action="{{ url_for('teacher.subsection_delete', subsection_id=sub.id) }}" class="d-inline"
+                      onsubmit="return confirm('Удалить подраздел «{{ sub.title }}»? Все задания внутри тоже удалятся.');">
+                  <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="alert alert-info">В разделе пока нет подразделов.</div>
+{% endif %}
+{% endblock %}

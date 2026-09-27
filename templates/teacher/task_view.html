@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block title %}{{ task.title }}{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb small">
+    <li class="breadcrumb-item"><a href="{{ url_for('teacher.dashboard') }}">Кабинет</a></li>
+    <li class="breadcrumb-item"><a href="{{ url_for('teacher.section_view', section_id=section.id) }}">{{ section.title }}</a></li>
+    <li class="breadcrumb-item"><a href="{{ url_for('teacher.subsection_view', subsection_id=sub.id) }}">{{ sub.title }}</a></li>
+    <li class="breadcrumb-item active">{{ task.title }}</li>
+  </ol>
+</nav>
+
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+      <div>
+        <h1 class="h4 mb-1">
+          {% if task.task_type == 'text' %}📝
+          {% elif task.task_type == 'file' %}📎
+          {% elif task.task_type == 'test' %}✅
+          {% elif task.task_type == 'link' %}🔗
+          {% endif %}
+          {{ task.title }}
+        </h1>
+        <div class="text-muted small">
+          Макс. балл: <strong>{{ task.max_score }}</strong>
+          {% if task.deadline %}
+            · Дедлайн: <strong>{{ task.deadline.strftime('%d.%m.%Y %H:%M') }}</strong>
+          {% else %}
+            · Без дедлайна
+          {% endif %}
+          · Тип: {{ task.task_type }}
+        </div>
+      </div>
+      <a href="{{ url_for('teacher.task_edit', task_id=task.id) }}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-pencil"></i> Редактировать
+      </a>
+    </div>
+    {% if task.description %}
+      <hr>
+      <p class="mb-0" style="white-space: pre-wrap;">{{ task.description }}</p>
+    {% endif %}
+
+    {% if task.task_type == 'test' and options %}
+      <hr>
+      <div class="small text-muted mb-1">Варианты теста:</div>
+      <ul class="mb-0">
+        {% for o in options %}
+          <li>
+            {{ o.text }}
+            {% if o.correct %}<span class="badge bg-success-subtle text-success-emphasis">правильный</span>{% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  </div>
+</div>
+
+<h2 class="h5 mb-3">Ответы ({{ submissions|length }})</h2>
+
+{% if submissions %}
+  <div class="row g-3">
+    {% for s in submissions %}
+      <div class="col-12">
+        <div class="card border-0 shadow-sm">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
+              <div>
+                <strong>{{ s.student.full_name }}</strong>
+                <span class="text-muted small">({{ s.student.login }})</span>
+                <div class="text-muted small">Сдано: {{ s.submitted_at.strftime('%d.%m.%Y %H:%M') }}</div>
+              </div>
+              <div>
+                {% if s.score is not none %}
+                  <span class="badge bg-success-subtle text-success-emphasis fs-6">
+                    {{ s.score }} / {{ task.max_score }}
+                  </span>
+                {% else %}
+                  <span class="badge bg-warning-subtle text-warning-emphasis">не оценено</span>
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="border rounded p-3 bg-light mb-3" style="white-space: pre-wrap;">{{ s.content or '—' }}</div>
+
+            {% if s.file_url %}
+              <div class="mb-3">
+                <a href="{{ s.file_url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                  <i class="bi bi-download"></i> Открыть файл
+                </a>
+              </div>
+            {% endif %}
+
+            <form method="post" action="{{ url_for('teacher.grade_submission', submission_id=s.id) }}">
+              <div class="row g-2 align-items-end">
+                <div class="col-md-2">
+                  <label class="form-label small mb-1">Оценка</label>
+                  <input name="score" type="number" min="0" max="{{ task.max_score }}"
+                         class="form-control form-control-sm" value="{{ s.score if s.score is not none else '' }}">
+                </div>
+                <div class="col-md-7">
+                  <label class="form-label small mb-1">Комментарий</label>
+                  <input name="comment" class="form-control form-control-sm" value="{{ s.comment or '' }}">
+                </div>
+                <div class="col-md-3">
+                  <button class="btn btn-sm btn-primary w-100">Сохранить</button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="alert alert-info">Пока никто не сдал это задание.</div>
+{% endif %}
+
+{% if not_submitted %}
+  <h2 class="h6 text-muted mt-4 mb-2">Не сдали ({{ not_submitted|length }})</h2>
+  <ul class="text-muted small">
+    {% for st in not_submitted %}
+      <li>{{ st.full_name }} <span class="text-muted">({{ st.login }})</span></li>
+    {% endfor %}
+  </ul>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Мои оценки{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb small">
+    <li class="breadcrumb-item"><a href="{{ url_for('student.dashboard') }}">Мои разделы</a></li>
+    <li class="breadcrumb-item active">Оценки</li>
+  </ol>
+</nav>
+
+<h1 class="h3 mb-4">Мои оценки</h1>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body">
+        <div class="text-muted small">Средний балл</div>
+        <div class="display-6">
+          {% if avg_percent is not none %}{{ avg_percent }}%{% else %}—{% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body">
+        <div class="text-muted small">Всего баллов</div>
+        <div class="display-6">{{ total_score }} / {{ total_max }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body">
+        <div class="text-muted small">Оценено заданий</div>
+        <div class="display-6">{{ graded_count }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if by_section %}
+  {% for section, subs in by_section.items() %}
+    <h2 class="h5 mt-4 mb-2">{{ section.title }}</h2>
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="table-responsive">
+        <table class="table align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Задание</th>
+              <th>Сдано</th>
+              <th>Оценка</th>
+              <th>Комментарий</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for s in subs %}
+              <tr>
+                <td>
+                  <a href="{{ url_for('student.task_view', task_id=s.task.id) }}"
+                     class="text-decoration-none">{{ s.task.title }}</a>
+                </td>
+                <td class="text-muted small">
+                  {{ s.submitted_at.strftime('%d.%m.%Y %H:%M') }}
+                </td>
+                <td>
+                  {% if s.score is not none %}
+                    <span class="badge bg-success-subtle text-success-emphasis">
+                      {{ s.score }} / {{ s.task.max_score }}
+                    </span>
+                  {% else %}
+                    <span class="badge bg-warning-subtle text-warning-emphasis">не оценено</span>
+                  {% endif %}
+                </td>
+                <td class="text-muted small">{{ s.comment or '—' }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% endfor %}
+{% else %}
+  <div class="alert alert-info">Вы пока не сдали ни одного задания.</div>
+{% endif %}
+{% endblock %}

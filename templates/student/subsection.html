@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}{{ sub.title }}{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb small">
+    <li class="breadcrumb-item"><a href="{{ url_for('student.dashboard') }}">Мои разделы</a></li>
+    <li class="breadcrumb-item"><a href="{{ url_for('student.section_view', section_id=section.id) }}">{{ section.title }}</a></li>
+    <li class="breadcrumb-item active">{{ sub.title }}</li>
+  </ol>
+</nav>
+
+<h1 class="h3 mb-3">{{ sub.title }}</h1>
+{% if sub.description %}<p class="text-muted">{{ sub.description }}</p>{% endif %}
+
+{% if tasks %}
+  <div class="row g-3">
+    {% for t in tasks %}
+      {% set s = my_subs.get(t.id) %}
+      {% set overdue = is_overdue(t) %}
+      <div class="col-12">
+        <a href="{{ url_for('student.task_view', task_id=t.id) }}"
+           class="text-decoration-none">
+          <div class="card border-0 shadow-sm">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                <div class="flex-grow-1">
+                  <h5 class="card-title mb-1 text-dark">
+                    {% if t.task_type == 'text' %}📝
+                    {% elif t.task_type == 'file' %}📎
+                    {% elif t.task_type == 'test' %}✅
+                    {% elif t.task_type == 'link' %}🔗
+                    {% endif %}
+                    {{ t.title }}
+                  </h5>
+                  <p class="text-muted small mb-1">{{ t.description or '' }}</p>
+                  <div class="text-muted small">
+                    <i class="bi bi-award"></i> макс. {{ t.max_score }}
+                    {% if t.deadline %}
+                      · <i class="bi bi-clock"></i>
+                      до {{ t.deadline.strftime('%d.%m.%Y %H:%M') }}
+                    {% endif %}
+                  </div>
+                </div>
+                <div class="text-end">
+                  {% if s and s.score is not none %}
+                    <span class="badge bg-success-subtle text-success-emphasis fs-6">
+                      {{ s.score }} / {{ t.max_score }}
+                    </span>
+                  {% elif s %}
+                    <span class="badge bg-info-subtle text-info-emphasis">сдано</span>
+                  {% elif overdue %}
+                    <span class="badge bg-danger-subtle text-danger-emphasis">просрочено</span>
+                  {% else %}
+                    <span class="badge bg-warning-subtle text-warning-emphasis">не сдано</span>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+        </a>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="alert alert-info">В подразделе пока нет заданий.</div>
+{% endif %}
+{% endblock %}

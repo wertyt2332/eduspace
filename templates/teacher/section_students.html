@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Ученики: {{ section.title }}{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb small">
+    <li class="breadcrumb-item"><a href="{{ url_for('teacher.dashboard') }}">Кабинет</a></li>
+    <li class="breadcrumb-item"><a href="{{ url_for('teacher.section_view', section_id=section.id) }}">{{ section.title }}</a></li>
+    <li class="breadcrumb-item active">Ученики</li>
+  </ol>
+</nav>
+
+<h1 class="h3 mb-4">Ученики раздела «{{ section.title }}»</h1>
+
+<form method="post">
+  <div class="card border-0 shadow-sm">
+    <div class="card-body">
+      {% if all_students %}
+        <div style="max-height: 500px; overflow-y: auto;">
+          {% for s in all_students %}
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="students" value="{{ s.id }}"
+                     id="s{{ s.id }}" {{ 'checked' if s in section.students }}>
+              <label class="form-check-label" for="s{{ s.id }}">
+                {{ s.full_name }} <span class="text-muted small">({{ s.login }})</span>
+              </label>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="text-muted mb-0">В системе пока нет учеников. Попросите админа создать их.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="d-flex gap-2 mt-3">
+    <button class="btn btn-primary">Сохранить</button>
+    <a href="{{ url_for('teacher.section_view', section_id=section.id) }}" class="btn btn-outline-secondary">Отмена</a>
+  </div>
+</form>
+{% endblock %}

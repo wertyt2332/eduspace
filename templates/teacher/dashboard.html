@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Кабинет учителя{% endblock %}
+
+{% block content %}
+<h1 class="h3 mb-4">Кабинет учителя</h1>
+
+{% if sections %}
+  <div class="row g-3">
+    {% for s in sections %}
+      <div class="col-md-6 col-lg-4">
+        <a href="{{ url_for('teacher.section_view', section_id=s.id) }}"
+           class="text-decoration-none">
+          <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+              <h5 class="card-title text-dark">{{ s.title }}</h5>
+              <p class="text-muted small mb-2">{{ s.description or 'Без описания' }}</p>
+              <div class="text-muted small">
+                <i class="bi bi-list-ul"></i> {{ s.subsections|length }} подразд.
+                &nbsp;·&nbsp;
+                <i class="bi bi-people"></i> {{ s.students|length }} учен.
+              </div>
+            </div>
+          </div>
+        </a>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="alert alert-info">
+    Вам пока не назначено ни одного раздела. Попросите администратора.
+  </div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Панель администратора{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h1 class="h3 mb-0">Панель администратора</h1>
+  <a href="{{ url_for('admin.import_csv') }}" class="btn btn-outline-primary btn-sm">
+    <i class="bi bi-upload"></i> CSV-импорт
+  </a>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <a href="{{ url_for('admin.sections_list') }}" class="text-decoration-none">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <div class="text-muted small">Разделов</div>
+          <div class="display-6 text-dark">{{ stats.sections }}</div>
+        </div>
+      </div>
+    </a>
+  </div>
+  <div class="col-md-4">
+    <a href="{{ url_for('admin.users_list', role='teacher') }}" class="text-decoration-none">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <div class="text-muted small">Учителей</div>
+          <div class="display-6 text-dark">{{ stats.teachers }}</div>
+        </div>
+      </div>
+    </a>
+  </div>
+  <div class="col-md-4">
+    <a href="{{ url_for('admin.users_list', role='student') }}" class="text-decoration-none">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <div class="text-muted small">Учеников</div>
+          <div class="display-6 text-dark">{{ stats.students }}</div>
+        </div>
+      </div>
+    </a>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="card-body">
+    <h5 class="card-title">Быстрые действия</h5>
+    <div class="d-flex flex-wrap gap-2 mt-3">
+      <a href="{{ url_for('admin.section_new') }}" class="btn btn-primary btn-sm">
+        <i class="bi bi-plus-lg"></i> Новый раздел
+      </a>
+      <a href="{{ url_for('admin.user_new', role='teacher') }}" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-person-plus"></i> Новый учитель
+      </a>
+      <a href="{{ url_for('admin.user_new', role='student') }}" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-person-plus"></i> Новый ученик
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}

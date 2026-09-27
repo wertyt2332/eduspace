@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Разделы{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb small">
+    <li class="breadcrumb-item"><a href="{{ url_for('admin.dashboard') }}">Админка</a></li>
+    <li class="breadcrumb-item active">Разделы</li>
+  </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0">Разделы</h1>
+  <a href="{{ url_for('admin.section_new') }}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-lg"></i> Новый раздел
+  </a>
+</div>
+
+{% if sections %}
+  <div class="row g-3">
+    {% for s in sections %}
+      <div class="col-md-6 col-lg-4">
+        <div class="card border-0 shadow-sm h-100 {{ '' if s.is_visible else 'opacity-75' }}">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <h5 class="card-title mb-0">{{ s.title }}</h5>
+              {% if not s.is_visible %}
+                <span class="badge bg-secondary">скрыт</span>
+              {% endif %}
+            </div>
+            <p class="text-muted small mb-2">{{ s.description or 'Без описания' }}</p>
+            <div class="text-muted small mb-3">
+              <i class="bi bi-person-badge"></i> {{ s.teachers|length }} учит.
+              &nbsp;·&nbsp;
+              <i class="bi bi-people"></i> {{ s.students|length }} учен.
+            </div>
+            <div class="d-flex flex-wrap gap-1">
+              <a href="{{ url_for('admin.section_edit', section_id=s.id) }}"
+                 class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-pencil"></i>
+              </a>
+              <a href="{{ url_for('admin.section_members', section_id=s.id) }}"
+                 class="btn btn-sm btn-outline-secondary" title="Состав">
+                <i class="bi bi-people"></i>
+              </a>
+              <form method="post" action="{{ url_for('admin.section_toggle', section_id=s.id) }}" class="d-inline">
+                <button class="btn btn-sm btn-outline-secondary" title="Скрыть/показать">
+                  <i class="bi bi-eye{{ '-slash' if s.is_visible else '' }}"></i>
+                </button>
+              </form>
+              <form method="post" action="{{ url_for('admin.section_delete', section_id=s.id) }}" class="d-inline"
+                    onsubmit="return confirm('Удалить раздел {{ s.title }}? Все подразделы и задания тоже удалятся.');">
+                <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="alert alert-info">Разделов пока нет.</div>
+{% endif %}
+{% endblock %}
