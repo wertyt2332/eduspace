@@ -7,7 +7,8 @@ from flask import (
 )
 from flask_login import login_required, current_user
 from extensions import db
-from models import User, Section, Subsection, Task, Submission
+from models import User, Section, Subsection, Task, Submission, Material
+from storage import save_file
 
 teacher_bp = Blueprint('teacher', __name__, url_prefix='/teacher')
 
@@ -369,3 +370,130 @@ def section_students(section_id):
         section=section,
         all_students=all_students,
     )
+
+
+
+# ---------- Материалы ----------
+
+def _own_material(material_id):
+    material = db.session.get(Material, material_id)
+    if not material:
+        abort(404)
+    _own_subsection(material.subsection_id)
+    return material
+
+
+@teacher_bp.route('/subsection/<int:subsection_id>/material/new', methods=['GET', 'POST'])
+@teacher_required
+def material_new(subsection_id):
+    sub = _own_subsection(subsection_id)
+
+    if request.method == 'POST':
+        title = request.form.get('title', '').strip()
+        material_type = request.form.get('material_type', 'text')
+        content = (request.form.get('content') or '').strip()
+
+        if not title:
+            flash('Название обязательно.', 'danger')
+            return redirect(url_for('teacher.material_new', subsection_id=sub.id))
+
+        if material_type not in ('text', 'video', 'link', 'file'):
+            flash('Неверный тип материала.', 'danger')
+            return redirect(url_for('teacher.material_new', subsection_id=sub.id))
+
+        file_url = None
+        if material_type == 'file':
+            uploaded = request.files.get('file')
+            if not uploaded or not uploaded.filename:
+                flash('Загрузите файл.', 'danger')
+                return redirect(url_for('teacher.material_new', subsection_id=sub.id))
+            try:
+                file_url = save_file(uploaded)
+            except ValueError as e:
+                flash(str(e), 'danger')
+                return redirect(url_for('teacher.material_new', subsection_id=sub.id))
+        elif not content:
+            flash('Введите содержимое.', 'danger')
+            return redirect(url_for('teacher.material_new', subsection_id=sub.id))
+
+        order = max([m.order for m in sub.materials], default=0) + 1
+        mat = Material(
+            subsection_id=sub.id,
+            title=title,
+            material_type=material_type,
+            content=content,
+            file_url=file_url,
+            order=order,
+        )
+        db.session.add(mat)
+        db.session.commit()
+        flash('Материал добавлен.', 'success')
+        return redirect(url_for('teacher.subsection_view', subsection_id=sub.id))
+
+    return render_template('teacher/material_form.html', section=sub.section, sub=sub, material=None)
+
+
+@teacher_bp.route('/material/<int:material_id>/edit', methods=['GET', 'POST'])
+@teacher_required
+def material_edit(material_id):
+    mat = _own_material(material_id)
+    sub = mat.subsection
+
+    if request.method == 'POST':
+        title = request.form.get('title', '').strip()
+        material_type = request.form.get('material_type', mat.material_type)
+        content = (request.form.get('content') or '').strip()
+
+        if not title:
+            flash('Название обязательно.', 'danger')
+            return redirect(url_for('teacher.material_edit', material_id=mat.id))
+
+        if material_type not in ('text', 'video', 'link', 'file'):
+            flash('Неверный тип.', 'danger')
+            return redirect(url_for('teacher.material_edit', material_id=mat.id))
+
+        mat.title = title
+        mat.material_type = material_type
+
+        if material_type == 'file':
+            uploaded = request.files.get('file')
+            if uploaded and uploaded.filename:
+                try:
+                    mat.file_url = save_file(uploaded)
+                except ValueError as e:
+                    flash(str(e), 'danger')
+                    return redirect(url_for('teacher.material_edit', material_id=mat.id))
+            mat.content = ''
+        else:
+            if not content:
+                flash('Введите содержимое.', 'danger')
+                return redirect(url_for('teacher.material_edit', material_id=mat.id))
+            mat.content = content
+            mat.file_url = None
+
+        db.session.commit()
+        flash('Материал сохранён.', 'success')
+        return redirect(url_for('teacher.subsection_view', subsection_id=sub.id))
+
+    return render_template('teacher/material_form.html', section=sub.section, sub=sub, material=mat)
+
+
+@teacher_bp.route('/material/<int:material_id>/toggle', methods=['POST'])
+@teacher_required
+def material_toggle(material_id):
+    mat = _own_material(material_id)
+    mat.is_visible = not mat.is_visible
+    db.session.commit()
+    flash('Видимость обновлена.', 'info')
+    return redirect(url_for('teacher.subsection_view', subsection_id=mat.subsection_id))
+
+
+@teacher_bp.route('/material/<int:material_id>/delete', methods=['POST'])
+@teacher_required
+def material_delete(material_id):
+    mat = _own_material(material_id)
+    sub_id = mat.subsection_id
+    db.session.delete(mat)
+    db.session.commit()
+    flash('Материал удалён.', 'info')
+    return redirect(url_for('teacher.subsection_view', subsection_id=sub_id))

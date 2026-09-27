@@ -10,17 +10,59 @@
   </ol>
 </nav>
 
-<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-  <h1 class="h3 mb-0">
-    {{ sub.title }}
-    {% if not sub.is_visible %}<span class="badge bg-secondary ms-2">скрыт</span>{% endif %}
-  </h1>
-  <a href="{{ url_for('teacher.task_new', subsection_id=sub.id) }}" class="btn btn-primary btn-sm">
-    <i class="bi bi-plus-lg"></i> Задание
-  </a>
-</div>
+<div class="d-flex gap-2">
+    <a href="{{ url_for('teacher.material_new', subsection_id=sub.id) }}" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-plus-lg"></i> Материал
+    </a>
+    <a href="{{ url_for('teacher.task_new', subsection_id=sub.id) }}" class="btn btn-primary btn-sm">
+      <i class="bi bi-plus-lg"></i> Задание
+    </a>
+  </div>
 
 {% if sub.description %}<p class="text-muted">{{ sub.description }}</p>{% endif %}
+
+{# ===== МАТЕРИАЛЫ ===== #}
+{% if sub.materials %}
+  <h2 class="h5 text-uppercase text-muted mt-4 mb-3">Материалы</h2>
+  <div class="row g-3 mb-4">
+    {% for m in sub.materials %}
+      <div class="col-md-6">
+        <div class="card border-0 shadow-sm h-100 {{ '' if m.is_visible else 'opacity-75' }}">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <h5 class="card-title mb-0">
+                {% if m.material_type == 'text' %}📄
+                {% elif m.material_type == 'video' %}🎥
+                {% elif m.material_type == 'link' %}🔗
+                {% elif m.material_type == 'file' %}📎
+                {% endif %}
+                {{ m.title }}
+              </h5>
+              {% if not m.is_visible %}<span class="badge bg-secondary">скрыт</span>{% endif %}
+            </div>
+            <p class="text-muted small mb-3">{{ m.material_type }}</p>
+            <div class="d-flex flex-wrap gap-1">
+              <a href="{{ url_for('teacher.material_edit', material_id=m.id) }}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-pencil"></i>
+              </a>
+              <form method="post" action="{{ url_for('teacher.material_toggle', material_id=m.id) }}" class="d-inline">
+                <button class="btn btn-sm btn-outline-secondary" title="Скрыть/показать">
+                  <i class="bi bi-eye{{ '-slash' if m.is_visible else '' }}"></i>
+                </button>
+              </form>
+              <form method="post" action="{{ url_for('teacher.material_delete', material_id=m.id) }}" class="d-inline"
+                    onsubmit="return confirm('Удалить материал «{{ m.title }}»?');">
+                <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}
+
+<h2 class="h5 text-uppercase text-muted mt-4 mb-3">Задания</h2>
 
 {% if sub.tasks %}
   <div class="row g-3">

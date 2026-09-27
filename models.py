@@ -85,6 +85,12 @@ class Subsection(db.Model):
         cascade='all, delete-orphan', order_by='Task.order'
     )
 
+    materials = db.relationship(
+        'Material', backref='subsection',
+        cascade='all, delete-orphan', order_by='Material.order'
+    )
+
+
 
 class Task(db.Model):
     """Задание. Типы: text | file | test | link."""
@@ -118,3 +124,17 @@ class Submission(db.Model):
     comment = db.Column(db.Text, default='')
     graded_at = db.Column(db.DateTime, nullable=True)
     graded_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+
+
+
+class Material(db.Model):
+    """Материал: текст / видео / ссылка / файл. Не оценивается."""
+    id = db.Column(db.Integer, primary_key=True)
+    subsection_id = db.Column(db.Integer, db.ForeignKey('subsection.id'), nullable=False)
+    title = db.Column(db.String(200), nullable=False)
+    material_type = db.Column(db.String(20), nullable=False)  # text | video | link | file
+    content = db.Column(db.Text, default='')       # для text/link/video — тут URL или текст
+    file_url = db.Column(db.String(500), nullable=True)
+    order = db.Column(db.Integer, default=0)
+    is_visible = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)

@@ -13,6 +13,54 @@
 <h1 class="h3 mb-3">{{ sub.title }}</h1>
 {% if sub.description %}<p class="text-muted">{{ sub.description }}</p>{% endif %}
 
+{# ===== МАТЕРИАЛЫ ===== #}
+{% if materials %}
+  <h2 class="h5 text-uppercase text-muted mb-3">📚 Материалы</h2>
+
+  {% for m in materials %}
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-body">
+        <h5 class="card-title mb-3">
+          {% if m.material_type == 'text' %}📄
+          {% elif m.material_type == 'video' %}🎥
+          {% elif m.material_type == 'link' %}🔗
+          {% elif m.material_type == 'file' %}📎
+          {% endif %}
+          {{ m.title }}
+        </h5>
+
+        {% if m.material_type == 'text' %}
+          <div style="white-space: pre-wrap;">{{ m.content }}</div>
+
+        {% elif m.material_type == 'video' %}
+          {% set embed = m.content|video_embed %}
+          {% if embed %}
+            <div class="ratio ratio-16x9">
+              <iframe src="{{ embed }}" allowfullscreen frameborder="0"></iframe>
+            </div>
+          {% else %}
+            <a href="{{ m.content }}" target="_blank" rel="noopener" class="btn btn-outline-primary btn-sm">
+              <i class="bi bi-play-circle"></i> Смотреть видео
+            </a>
+          {% endif %}
+
+        {% elif m.material_type == 'link' %}
+          <a href="{{ m.content }}" target="_blank" rel="noopener" class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-box-arrow-up-right"></i> Открыть ссылку
+          </a>
+
+        {% elif m.material_type == 'file' and m.file_url %}
+          <a href="{{ m.file_url }}" target="_blank" class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-download"></i> Скачать файл
+          </a>
+        {% endif %}
+      </div>
+    </div>
+  {% endfor %}
+{% endif %}
+
+<h2 class="h5 text-uppercase text-muted mt-4 mb-3">📝 Задания</h2>
+
 {% if tasks %}
   <div class="row g-3">
     {% for t in tasks %}

@@ -95,8 +95,8 @@ def section_view(section_id):
 def subsection_view(subsection_id):
     sub = _enrolled_subsection(subsection_id)
     tasks = [t for t in sub.tasks if t.is_visible]
+    materials = [m for m in sub.materials if m.is_visible]
 
-    # статусы по каждому заданию
     my_subs = {
         s.task_id: s for s in Submission.query
         .filter_by(student_id=current_user.id)
@@ -109,9 +109,11 @@ def subsection_view(subsection_id):
         section=sub.section,
         sub=sub,
         tasks=tasks,
+        materials=materials,
         my_subs=my_subs,
         is_overdue=_is_overdue,
     )
+
 
 
 # ---------- Задание ----------
