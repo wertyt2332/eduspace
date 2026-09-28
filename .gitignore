@@ -10,3 +10,5 @@ uploads/
 .DS_Store
 .idea/
 .vscode/
+*.save
+render_dump.sql
