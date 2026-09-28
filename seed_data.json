@@ -1,0 +1,123 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "login": "admin",
+      "password_hash": "scrypt:32768:8:1$MaQYJhTgBSBGe2jn$5fad0f4f121944be9bb0ed5d90ff068be25fa9b8ceb7943ca5c99e334df2eb5e20b1b7730d6ea96f94f458add1b01a78700a2d855fb529c861e8b6dc75174f18",
+      "full_name": "Администратор",
+      "role": "admin",
+      "created_at": "2026-09-27T18:14:47.686119"
+    },
+    {
+      "id": 2,
+      "login": "2010.1.10",
+      "password_hash": "scrypt:32768:8:1$23fEryyql3ueU4E8$09cfea4798be19da7c98ca5955dd39aa5f8239d56b2c6c8d7e9f94c9c2da720b6537471569924a2cba469fc6cbcd1039dc2e30f6fefb1e7ad8b189f533fcf527",
+      "full_name": "Боглаева Алиса Владимировна",
+      "role": "student",
+      "created_at": "2026-09-27T18:26:17.884744"
+    },
+    {
+      "id": 3,
+      "login": "Egorush.Olga",
+      "password_hash": "scrypt:32768:8:1$6pWDnFDbRXJRotUY$ab173f8e0943c0fb559506bbc1b0c594abe58eb95ebc56f8286714163cae20b1bf04e7d18be75223b98330fb4d7980662ccb726225ad15d87b8734bd1d673b2f",
+      "full_name": "Егорушкина Ольга Сергеевна",
+      "role": "teacher",
+      "created_at": "2026-09-27T18:26:55.636832"
+    }
+  ],
+  "sections": [
+    {
+      "id": 1,
+      "title": "Химия",
+      "description": "Любимая Химия)))",
+      "is_visible": true,
+      "created_at": "2026-09-27T18:27:17.110625",
+      "teacher_ids": [
+        3
+      ],
+      "student_ids": [
+        2
+      ]
+    }
+  ],
+  "subsections": [
+    {
+      "id": 1,
+      "section_id": 1,
+      "title": "Оксиды",
+      "description": "",
+      "order": 1,
+      "is_visible": true,
+      "created_at": "2026-09-27T18:49:01.118609"
+    }
+  ],
+  "tasks": [
+    {
+      "id": 1,
+      "subsection_id": 1,
+      "title": "Классификация оксидов",
+      "description": "Какие есть оксиды",
+      "task_type": "text",
+      "max_score": 5,
+      "deadline": null,
+      "is_visible": true,
+      "order": 1,
+      "options_json": "[]",
+      "created_at": "2026-09-27T18:50:11.734834"
+    },
+    {
+      "id": 2,
+      "subsection_id": 1,
+      "title": "test",
+      "description": "test",
+      "task_type": "file",
+      "max_score": 5,
+      "deadline": null,
+      "is_visible": true,
+      "order": 2,
+      "options_json": "[]",
+      "created_at": "2026-09-27T20:02:04.991301"
+    }
+  ],
+  "materials": [
+    {
+      "id": 1,
+      "subsection_id": 1,
+      "title": "ывмывм",
+      "material_type": "file",
+      "content": "",
+      "file_url": "https://lzsszzunlgmhlkpjuhss.supabase.co/storage/v1/object/public/uploads/4316951715ec4130b9a78a3864231cc0.pdf?",
+      "order": 1,
+      "is_visible": true,
+      "created_at": "2026-09-27T21:14:26.364574"
+    }
+  ],
+  "submissions": [
+    {
+      "id": 1,
+      "task_id": 1,
+      "student_id": 2,
+      "content": "ДА ПОХУЙ САЙТ РАБОТАЕЕЕЕЕТ!!!!!!!!!",
+      "file_url": null,
+      "submitted_at": "2026-09-27T19:01:37.180589",
+      "updated_at": "2026-09-27T19:02:12.082616",
+      "score": 5,
+      "comment": "132",
+      "graded_at": "2026-09-27T19:02:12.079463",
+      "graded_by_id": 3
+    },
+    {
+      "id": 2,
+      "task_id": 2,
+      "student_id": 2,
+      "content": "",
+      "file_url": "https://lzsszzunlgmhlkpjuhss.supabase.co/storage/v1/object/public/uploads/83fc535c248d40b9bfe607a9bbf5287f.webp?",
+      "submitted_at": "2026-09-27T20:02:30.499043",
+      "updated_at": "2026-09-27T20:02:30.500671",
+      "score": null,
+      "comment": "",
+      "graded_at": null,
+      "graded_by_id": null
+    }
+  ]
+}
