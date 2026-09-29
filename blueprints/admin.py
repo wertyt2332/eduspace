@@ -1,5 +1,6 @@
 import csv
 import io
+import json
 import secrets
 import string
 from functools import wraps
@@ -322,4 +323,70 @@ def stop_impersonate():
 
     login_user(admin)
     flash('Возврат в админку.', 'success')
-    return redirect(url_for('admin.dashboard'))
+    return redirect(url_for('admin.dashboard'))\
+
+
+
+
+# ---------- Резервное копирование ----------
+
+@admin_bp.route('/backup')
+@admin_required
+def backup_page():
+    return render_template('admin/backup.html')
+
+
+@admin_bp.route('/backup/save_now', methods=['POST'])
+@admin_required
+def backup_save_now():
+    from backup import save_to_supabase
+    ok, err = save_to_supabase()
+    if ok:
+        flash('Бэкап сохранён в Supabase Storage.', 'success')
+    else:
+        flash(f'Ошибка: {err}', 'danger')
+    return redirect(url_for('admin.backup_page'))
+
+
+@admin_bp.route('/backup/download')
+@admin_required
+def backup_download():
+    from flask import Response
+    from backup import dump_to_dict
+    from datetime import datetime as dt
+
+    data = dump_to_dict()
+    payload = json.dumps(data, ensure_ascii=False, indent=2)
+    filename = f'eduspace_backup_{dt.utcnow().strftime("%Y%m%d_%H%M")}.json'
+    return Response(
+        payload,
+        mimetype='application/json',
+        headers={'Content-Disposition': f'attachment; filename={filename}'}
+    )
+
+
+@admin_bp.route('/backup/upload', methods=['POST'])
+@admin_required
+def backup_upload():
+    file = request.files.get('file')
+    if not file or not file.filename:
+        flash('Выберите файл.', 'danger')
+        return redirect(url_for('admin.backup_page'))
+
+    try:
+        data = json.loads(file.read().decode('utf-8'))
+    except Exception as e:
+        flash(f'Ошибка чтения файла: {e}', 'danger')
+        return redirect(url_for('admin.backup_page'))
+
+    replace = request.form.get('replace') == 'on'
+
+    try:
+        from backup import restore_from_dict
+        stats = restore_from_dict(data, clear_first=replace)
+        flash(f'Импорт завершён: {stats}', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Ошибка импорта: {e}', 'danger')
+
+    return redirect(url_for('admin.backup_page'))

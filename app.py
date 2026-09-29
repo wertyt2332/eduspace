@@ -13,135 +13,66 @@ from blueprints.student import student_bp
 from blueprints.profile import profile_bp
 
 
-def load_seed_if_empty(app):
-    """Если БД пуста — загружает данные из seed_data.json."""
-    seed_path = os.path.join(app.root_path, 'seed_data.json')
-    if not os.path.exists(seed_path):
-        return
+def bootstrap_database(app):
+    """При старте: если БД пуста, восстанавливает данные.
+    Порядок: Supabase → seed_data.json → создаёт админа.
+    """
+    from backup import load_from_supabase, load_from_local_file, restore_from_dict
 
     if User.query.first():
-        return  # база не пуста — ничего не делаем
+        return  # БД не пуста
 
-    try:
-        with open(seed_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-    except Exception as e:
-        print(f'[seed] Ошибка чтения seed_data.json: {e}')
-        return
+    # 1) Supabase
+    if app.config.get('SUPABASE_URL'):
+        data, err = load_from_supabase()
+        if data:
+            try:
+                stats = restore_from_dict(data, clear_first=False)
+                print(f'[bootstrap] Восстановлено из Supabase: {stats}')
+                return
+            except Exception as e:
+                print(f'[bootstrap] Ошибка восстановления из Supabase: {e}')
+        else:
+            print(f'[bootstrap] Supabase пуст или ошибка: {err}')
 
-    def dt(s):
-        return datetime.fromisoformat(s) if s else None
+    # 2) seed_data.json
+    seed_path = os.path.join(app.root_path, 'seed_data.json')
+    data = load_from_local_file(seed_path)
+    if data:
+        try:
+            stats = restore_from_dict(data, clear_first=False)
+            print(f'[bootstrap] Восстановлено из seed_data.json: {stats}')
+            return
+        except Exception as e:
+            print(f'[bootstrap] Ошибка восстановления из seed: {e}')
 
-    try:
-        # 1) Пользователи
-        for u in data.get('users', []):
-            db.session.add(User(
-                id=u['id'],
-                login=u['login'],
-                password_hash=u['password_hash'],
-                full_name=u['full_name'],
-                role=u['role'],
-                created_at=dt(u.get('created_at')),
-            ))
-        db.session.flush()
 
-        # 2) Разделы
-        for s in data.get('sections', []):
-            db.session.add(Section(
-                id=s['id'],
-                title=s['title'],
-                description=s.get('description', ''),
-                is_visible=s.get('is_visible', True),
-                created_at=dt(s.get('created_at')),
-            ))
-        db.session.flush()
+def start_autobackup(app, interval=300):
+    """Фоновый поток: сохраняет бэкап в Supabase каждые N секунд."""
+    import threading
+    import time
 
-        # 3) Связи раздел ↔ учитель/ученик
-        for s in data.get('sections', []):
-            section = db.session.get(Section, s['id'])
-            for tid in s.get('teacher_ids', []):
-                u = db.session.get(User, tid)
-                if u:
-                    section.teachers.append(u)
-            for sid in s.get('student_ids', []):
-                u = db.session.get(User, sid)
-                if u:
-                    section.students.append(u)
-        db.session.flush()
+    def loop():
+        with app.app_context():
+            while True:
+                time.sleep(interval)
+                try:
+                    from backup import save_to_supabase
+                    ok, err = save_to_supabase()
+                    if ok:
+                        print(f'[backup] Автобэкап в Supabase: OK', flush=True)
+                    else:
+                        print(f'[backup] Ошибка автобэкапа: {err}', flush=True)
+                except Exception as e:
+                    print(f'[backup] Исключение в автобэкапе: {e}', flush=True)
 
-        # 4) Подразделы
-        for sub in data.get('subsections', []):
-            db.session.add(Subsection(
-                id=sub['id'],
-                section_id=sub['section_id'],
-                title=sub['title'],
-                description=sub.get('description', ''),
-                order=sub.get('order', 0),
-                is_visible=sub.get('is_visible', True),
-                created_at=dt(sub.get('created_at')),
-            ))
-        db.session.flush()
-
-        # 5) Задания
-        for t in data.get('tasks', []):
-            db.session.add(Task(
-                id=t['id'],
-                subsection_id=t['subsection_id'],
-                title=t['title'],
-                description=t.get('description', ''),
-                task_type=t['task_type'],
-                max_score=t.get('max_score', 5),
-                deadline=dt(t.get('deadline')),
-                is_visible=t.get('is_visible', True),
-                order=t.get('order', 0),
-                options_json=t.get('options_json', '[]'),
-                created_at=dt(t.get('created_at')),
-            ))
-        db.session.flush()
-
-        # 6) Материалы
-        for m in data.get('materials', []):
-            db.session.add(Material(
-                id=m['id'],
-                subsection_id=m['subsection_id'],
-                title=m['title'],
-                material_type=m['material_type'],
-                content=m.get('content', ''),
-                file_url=m.get('file_url'),
-                order=m.get('order', 0),
-                is_visible=m.get('is_visible', True),
-                created_at=dt(m.get('created_at')),
-            ))
-        db.session.flush()
-
-        # 7) Ответы
-        for s in data.get('submissions', []):
-            db.session.add(Submission(
-                id=s['id'],
-                task_id=s['task_id'],
-                student_id=s['student_id'],
-                content=s.get('content', ''),
-                file_url=s.get('file_url'),
-                submitted_at=dt(s.get('submitted_at')),
-                updated_at=dt(s.get('updated_at')),
-                score=s.get('score'),
-                comment=s.get('comment', ''),
-                graded_at=dt(s.get('graded_at')),
-                graded_by_id=s.get('graded_by_id'),
-            ))
-
-        db.session.commit()
-        print(f'[seed] Восстановлено из seed_data.json:')
-        print(f'       пользователей: {len(data.get("users", []))}')
-        print(f'       разделов:      {len(data.get("sections", []))}')
-        print(f'       заданий:       {len(data.get("tasks", []))}')
-
-    except Exception as e:
-        db.session.rollback()
-        print(f'[seed] Ошибка загрузки: {e}')
+    t = threading.Thread(target=loop, daemon=True, name='autobackup')
+    t.start()
+    print(f'[backup] Автобэкап запущен (каждые {interval} сек)', flush=True)
 
 
 def ensure_admin(app):
+    """Создаёт админа из конфига, если его ещё нет."""
     login = app.config['ADMIN_LOGIN']
     if not User.query.filter_by(login=login).first():
         admin = User(login=login, full_name='Администратор', role='admin')
@@ -181,14 +112,8 @@ def create_app():
         except (ValueError, TypeError):
             return []
 
-    with app.app_context():
-        db.create_all()
-        load_seed_if_empty(app)   # ← сначала пробуем восстановить
-        ensure_admin(app)          # ← если админа нет — создаём
-
     @app.template_filter('video_embed')
     def video_embed_filter(url):
-        """Превращает ссылку YouTube/Vimeo/RuTube в embed-URL."""
         import re
         url = (url or '').strip()
         m = re.search(r'(?:youtube\.com/watch\?v=|youtu\.be/|youtube\.com/embed/)([\w-]{6,})', url)
@@ -201,6 +126,17 @@ def create_app():
         if m:
             return f'https://rutube.ru/play/embed/{m.group(1)}'
         return None
+
+    with app.app_context():
+        db.create_all()
+        bootstrap_database(app)
+        ensure_admin(app)
+
+    # Автобэкап (не в reloader-процессе)
+    if app.config.get('SUPABASE_URL'):
+        import os
+        if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+            start_autobackup(app, interval=300)
 
     return app
 

@@ -46,6 +46,9 @@
   <div class="card-body">
     <h5 class="card-title">Быстрые действия</h5>
     <div class="d-flex flex-wrap gap-2 mt-3">
+      <a href="{{ url_for('admin.backup_page') }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-shield-check"></i> Бэкап
+      </a>
       <a href="{{ url_for('admin.section_new') }}" class="btn btn-primary btn-sm">
         <i class="bi bi-plus-lg"></i> Новый раздел
       </a>

@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}Резервное копирование{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb small">
+    <li class="breadcrumb-item"><a href="{{ url_for('admin.dashboard') }}">Админка</a></li>
+    <li class="breadcrumb-item active">Бэкап</li>
+  </ol>
+</nav>
+
+<h1 class="h3 mb-4">Резервное копирование</h1>
+
+<div class="alert alert-info">
+  <i class="bi bi-info-circle"></i>
+  Автобэкап сохраняется в <strong>Supabase Storage</strong> каждые 5 минут.
+  При следующем деплое данные восстановятся автоматически.
+</div>
+
+<div class="row g-3">
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <h5 class="card-title"><i class="bi bi-cloud-arrow-up text-primary"></i> Сохранить сейчас</h5>
+        <p class="text-muted small">
+          Немедленно выгрузить текущую БД в Supabase Storage.
+          Полезно перед обновлением или если что-то поменял.
+        </p>
+        <form method="post" action="{{ url_for('admin.backup_save_now') }}">
+          <button class="btn btn-primary btn-sm w-100">
+            <i class="bi bi-cloud-upload"></i> Сохранить в облако
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <h5 class="card-title"><i class="bi bi-download text-success"></i> Скачать</h5>
+        <p class="text-muted small">
+          Скачать полный снимок БД в JSON-файл.
+          Храни локально как страховку.
+        </p>
+        <a href="{{ url_for('admin.backup_download') }}" class="btn btn-success btn-sm w-100">
+          <i class="bi bi-download"></i> Скачать backup.json
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <h5 class="card-title"><i class="bi bi-upload text-warning"></i> Загрузить</h5>
+        <p class="text-muted small">
+          Восстановить БД из ранее скачанного файла.
+          ⚠️ Осторожно — можно перезаписать данные!
+        </p>
+        <form method="post" action="{{ url_for('admin.backup_upload') }}" enctype="multipart/form-data">
+          <input type="file" name="file" accept=".json,application/json" class="form-control form-control-sm mb-2" required>
+          <div class="form-check mb-2">
+            <input class="form-check-input" type="checkbox" name="replace" id="replace">
+            <label class="form-check-label small" for="replace">
+              Заменить все данные (иначе — только добавить)
+            </label>
+          </div>
+          <button class="btn btn-warning btn-sm w-100"
+                  onclick="return confirm('Уверен? Если галка «Заменить все данные» — старая БД будет стёрта.');">
+            <i class="bi bi-upload"></i> Загрузить
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm mt-4">
+  <div class="card-body">
+    <h5 class="card-title">Как это работает</h5>
+    <ul class="mb-0 small text-muted">
+      <li>Каждые 5 минут сервер автоматически загружает снимок БД в <code>uploads/backup.json</code> в Supabase.</li>
+      <li>При следующем деплое (push) Render перезапустит приложение с пустой SQLite — данные восстановятся из этого снимка.</li>
+      <li>Если Supabase недоступен — используется <code>seed_data.json</code> из репозитория (как резервный вариант).</li>
+      <li><strong>Файлы</strong> (картинки, PDF) лежат отдельно в Supabase Storage и не слетают при деплое.</li>
+    </ul>
+  </div>
+</div>
+{% endblock %}
