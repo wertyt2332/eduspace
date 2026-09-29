@@ -12,7 +12,7 @@
 </nav>
 
 <div class="row justify-content-center">
-  <div class="col-md-8 col-lg-7">
+  <div class="col-lg-9">
     <div class="card border-0 shadow-sm">
       <div class="card-body p-4">
         <h1 class="h4 mb-4">{{ 'Новое задание' if not task else 'Редактирование задания' }}</h1>
@@ -25,7 +25,7 @@
 
           <div class="mb-3">
             <label class="form-label">Описание / вопрос</label>
-            <textarea name="description" rows="4" class="form-control">{{ task.description if task else '' }}</textarea>
+            <textarea name="description" rows="3" class="form-control">{{ task.description if task else '' }}</textarea>
           </div>
 
           <div class="row g-3 mb-3">
@@ -51,17 +51,22 @@
                    value="{{ task.deadline.strftime('%Y-%m-%dT%H:%M') if task and task.deadline else '' }}">
           </div>
 
+          {# ===== ТЕСТ ===== #}
           <div id="test-block" class="mb-3" style="display:none;">
-            <label class="form-label d-flex justify-content-between align-items-center">
-              <span>Варианты ответа <span class="text-muted small">(отметь галочкой правильные)</span></span>
-              <button type="button" class="btn btn-sm btn-outline-secondary" onclick="addOption()">
-                <i class="bi bi-plus"></i> Добавить
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <h5 class="mb-0">Вопросы теста</h5>
+              <button type="button" class="btn btn-sm btn-outline-primary" onclick="addQuestion()">
+                <i class="bi bi-plus-lg"></i> Добавить вопрос
               </button>
-            </label>
-            <div id="options-list"></div>
+            </div>
+            <div id="questions-list"></div>
+            <div class="alert alert-info small mb-0">
+              <i class="bi bi-info-circle"></i>
+              Если в вопросе несколько правильных ответов — поставь несколько галочек. Если один — только одну.
+            </div>
           </div>
 
-          <div class="d-flex gap-2">
+          <div class="d-flex gap-2 mt-4">
             <button class="btn btn-primary">Сохранить</button>
             <a href="{{ url_for('teacher.subsection_view', subsection_id=sub.id) }}" class="btn btn-outline-secondary">Отмена</a>
           </div>
@@ -74,36 +79,129 @@
 <script>
   const typeSel = document.getElementById('task_type');
   const testBlock = document.getElementById('test-block');
-  const optionsList = document.getElementById('options-list');
+  const questionsList = document.getElementById('questions-list');
 
-  const existingOptions = {{ (task.options_json|safe if task else '[]') or '[]' }};
+  let Q_COUNT = 0;
+
+  // Существующие вопросы (если редактируем тест)
+  const existingQuestions = (() => {
+    try {
+      const raw = {{ (task.options_json|safe if task else '{}') or '{}' }};
+      if (raw && typeof raw === 'object') {
+        if (Array.isArray(raw.questions)) return raw.questions;
+        // старый формат
+        if (Array.isArray(raw) && raw.length && 'correct' in raw[0]) {
+          return [{
+            text: 'Вопрос 1',
+            type: 'single',
+            options: raw,
+          }];
+        }
+      }
+    } catch (e) {}
+    return [];
+  })();
+
+  function esc(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function addQuestion(data) {
+    const qi = Q_COUNT++;
+    const wrap = document.createElement('div');
+    wrap.className = 'card mb-3 bg-light border-0';
+    wrap.dataset.qIndex = qi;
+
+    const optsHtml = (data?.options || []).map(o => optionRow(qi, o.text, o.correct)).join('')
+      || optionRow(qi, '', false) + optionRow(qi, '', false);
+
+    wrap.innerHTML = `
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <strong class="q-number">Вопрос 1</strong>
+          <button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.card').remove(); renumber()">Удалить</button>
+        </div>
+        <input name="q_text" class="form-control mb-2" placeholder="Текст вопроса" value="${esc(data?.text)}" required>
+        <div class="mb-2">
+          <label class="form-label small mb-1">Тип ответа</label>
+          <select name="q_type" class="form-select form-select-sm">
+            <option value="single" ${data?.type === 'multiple' ? '' : 'selected'}>Один правильный</option>
+            <option value="multiple" ${data?.type === 'multiple' ? 'selected' : ''}>Несколько правильных</option>
+          </select>
+        </div>
+        <div class="small text-muted mb-1">Варианты ответа (галочка = правильный):</div>
+        <div class="q-options">${optsHtml}</div>
+        <button type="button" class="btn btn-sm btn-outline-secondary"
+                onclick="this.previousElementSibling.insertAdjacentHTML('beforeend', optionRow(${qi}));">
+          <i class="bi bi-plus"></i> Добавить вариант
+        </button>
+      </div>
+    `;
+    questionsList.appendChild(wrap);
+    renumber();
+  }
+
+  function optionRow(qi, text = '', correct = false) {
+    const idx = Math.floor(Math.random() * 1e9);
+    return `
+      <div class="input-group input-group-sm mb-1">
+        <span class="input-group-text">
+          <input type="checkbox" name="q${qi}_opt_correct" value="${idx}" ${correct ? 'checked' : ''}>
+        </span>
+        <input name="q${qi}_opt_text" class="form-control" placeholder="Вариант" value="${esc(text)}">
+        <button type="button" class="btn btn-outline-danger" onclick="this.parentNode.remove()">×</button>
+      </div>
+    `;
+  }
+
+  // пересобираем индексы опций, чтобы value был 0,1,2,...
+  function fixOptionIndexes(card) {
+    const qi = card.dataset.qIndex;
+    card.querySelectorAll('.q-options .input-group').forEach((row, oi) => {
+      row.querySelector('input[type=checkbox]').value = oi;
+    });
+  }
+
+  // при добавлении строки через DOM (optionRow — вспомогательная)
+  function optionRow(qi, text = '', correct = false) {
+    const idx = Math.floor(Math.random() * 1e9);
+    return `
+      <div class="input-group input-group-sm mb-1">
+        <span class="input-group-text">
+          <input type="checkbox" name="q${qi}_opt_correct" value="${idx}" ${correct ? 'checked' : ''}>
+        </span>
+        <input name="q${qi}_opt_text" class="form-control" placeholder="Вариант" value="${esc(text)}">
+        <button type="button" class="btn btn-outline-danger" onclick="this.parentNode.remove()">×</button>
+      </div>
+    `;
+  }
+
+  function renumber() {
+    document.querySelectorAll('#questions-list > .card').forEach((card, i) => {
+      card.querySelector('.q-number').textContent = 'Вопрос ' + (i + 1);
+    });
+  }
+
+  // Перед отправкой: пересобираем value у чекбоксов опций (0,1,2 внутри каждого вопроса)
+  document.getElementById('task-form').addEventListener('submit', () => {
+    document.querySelectorAll('#questions-list > .card').forEach(card => {
+      fixOptionIndexes(card);
+    });
+  });
 
   function toggleTest() {
     testBlock.style.display = typeSel.value === 'test' ? 'block' : 'none';
-  }
-
-  function addOption(text = '', correct = false) {
-    const div = document.createElement('div');
-    div.className = 'input-group mb-2';
-    div.innerHTML = `
-      <span class="input-group-text">
-        <input type="checkbox" name="option_correct" value="${optionsList.children.length}"
-               ${correct ? 'checked' : ''}>
-      </span>
-      <input name="option_text" class="form-control" placeholder="Вариант" value="${text.replace(/"/g,'&quot;')}">
-      <button type="button" class="btn btn-outline-danger" onclick="this.parentNode.remove()">×</button>
-    `;
-    optionsList.appendChild(div);
+    if (typeSel.value === 'test' && questionsList.children.length === 0 && existingQuestions.length === 0) {
+      addQuestion();
+    }
   }
 
   typeSel.addEventListener('change', toggleTest);
-  toggleTest();
 
-  if (existingOptions && existingOptions.length) {
-    existingOptions.forEach(o => addOption(o.text, o.correct));
-  } else if (typeSel.value === 'test') {
-    addOption();
-    addOption();
+  // Инициализация
+  if (typeSel.value === 'test' && existingQuestions.length) {
+    existingQuestions.forEach(q => addQuestion(q));
   }
+  toggleTest();
 </script>
 {% endblock %}

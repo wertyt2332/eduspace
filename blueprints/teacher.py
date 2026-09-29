@@ -60,7 +60,36 @@ def _parse_deadline(value):
         return None
 
 
-def _parse_test_options(form):
+def _parse_test_questions(form):
+    """Собирает список вопросов теста из формы."""
+    q_texts = form.getlist('q_text')
+    q_types = form.getlist('q_type')
+
+    questions = []
+    for qi, q_text in enumerate(q_texts):
+        q_text = q_text.strip()
+        if not q_text:
+            continue
+        opt_texts = form.getlist(f'q{qi}_opt_text')
+        opt_correct = set(map(int, form.getlist(f'q{qi}_opt_correct')))
+        options = []
+        for oi, ot in enumerate(opt_texts):
+            ot = ot.strip()
+            if not ot:
+                continue
+            options.append({'text': ot, 'correct': oi in opt_correct})
+        if len(options) < 2:
+            continue
+        if not any(o['correct'] for o in options):
+            continue
+        questions.append({
+            'text': q_text,
+            'type': q_types[qi] if qi < len(q_types) else 'single',
+            'options': options,
+        })
+    return questions
+
+
     """Собирает варианты теста из формы."""
     texts = form.getlist('option_text')
     correct_indexes = set(map(int, form.getlist('option_correct')))
@@ -182,6 +211,11 @@ def task_new(subsection_id):
 
             options_json = '[]'
             if task_type == 'test':
+                questions = _parse_test_questions(request.form)
+                if not questions:
+                    flash('Добавьте хотя бы один вопрос с 2+ вариантами и отмеченным правильным.', 'danger')
+                    return render_template('teacher/task_form.html', section=sub.section, sub=sub, task=None)
+                options_json = json.dumps({'questions': questions}, ensure_ascii=False)
                 options = _parse_test_options(request.form)
                 if len(options) < 2:
                     flash('В тесте нужно минимум 2 варианта.', 'danger')
@@ -242,6 +276,12 @@ def task_edit(task_id):
             task.deadline = _parse_deadline(deadline_raw)
 
             if task_type == 'test':
+                questions = _parse_test_questions(request.form)
+                if questions:
+                    task.options_json = json.dumps({'questions': questions}, ensure_ascii=False)
+                else:
+                    flash('Тест: добавьте хотя бы один вопрос с 2+ вариантами и правильным ответом.', 'danger')
+                    return redirect(url_for('teacher.task_edit', task_id=task.id))
                 options = _parse_test_options(request.form)
                 if len(options) >= 2 and any(o['correct'] for o in options):
                     task.options_json = json.dumps(options, ensure_ascii=False)
@@ -304,7 +344,18 @@ def task_view(task_id):
     submitted_ids = {s.student_id for s in submissions}
     not_submitted = [s for s in all_students if s.id not in submitted_ids]
 
-    options = json.loads(task.options_json or '[]')
+    raw = json.loads(task.options_json or '{}')
+    if isinstance(raw, dict) and 'questions' in raw:
+        questions = raw['questions']
+    elif isinstance(raw, list) and raw and 'correct' in raw[0]:
+        # старый формат — превращаем в один вопрос
+        questions = [{
+            'text': 'Вопрос 1',
+            'type': 'single' if sum(1 for o in raw if o.get('correct')) == 1 else 'multiple',
+            'options': raw,
+        }]
+    else:
+        questions = []
 
     return render_template(
         'teacher/task_view.html',
@@ -313,7 +364,7 @@ def task_view(task_id):
         task=task,
         submissions=submissions,
         not_submitted=not_submitted,
-        options=options,
+        questions=questions,
     )
 
 

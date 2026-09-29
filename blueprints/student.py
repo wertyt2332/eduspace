@@ -58,7 +58,37 @@ def _is_overdue(task):
     return task.deadline is not None and datetime.utcnow() > task.deadline
 
 
-def _grade_test(task, selected_indexes):
+def _get_questions(task):
+    """Возвращает список вопросов (нормализует старый и новый формат)."""
+    raw = json.loads(task.options_json or '{}')
+    if isinstance(raw, dict) and 'questions' in raw:
+        return raw['questions']
+    if isinstance(raw, list) and raw and 'correct' in raw[0]:
+        # старый формат
+        return [{
+            'text': 'Вопрос 1',
+            'type': 'single' if sum(1 for o in raw if o.get('correct')) == 1 else 'multiple',
+            'options': raw,
+        }]
+    return []
+
+
+def _grade_test(task, answer_matrix):
+    """Автопроверка. answer_matrix = [[selected_idx,...], ...] по вопросам."""
+    questions = _get_questions(task)
+    if not questions:
+        return 0
+
+    correct_count = 0
+    for i, q in enumerate(questions):
+        correct = {j for j, o in enumerate(q['options']) if o.get('correct')}
+        selected = set(answer_matrix[i]) if i < len(answer_matrix) else set()
+        if correct == selected:
+            correct_count += 1
+
+    if correct_count == len(questions):
+        return task.max_score
+    return int(round(correct_count / len(questions) * task.max_score))
     """Автопроверка теста."""
     options = json.loads(task.options_json or '[]')
     correct = {i for i, o in enumerate(options) if o.get('correct')}
@@ -129,7 +159,7 @@ def task_view(task_id):
         task_id=task.id, student_id=current_user.id
     ).first()
 
-    options = json.loads(task.options_json or '[]')
+    questions = _get_questions(task)
     overdue = _is_overdue(task)
     graded = submission is not None and submission.score is not None
     locked = overdue or graded  # редактирование запрещено
@@ -164,6 +194,14 @@ def task_view(task_id):
                     return redirect(url_for('student.task_view', task_id=task.id))
 
             elif task.task_type == 'test':
+                matrix = []
+                for qi in range(len(questions)):
+                    picks = list(map(int, request.form.getlist(f'q{qi}')))
+                    if not picks:
+                        flash(f'Вопрос {qi + 1}: выберите хотя бы один вариант.', 'danger')
+                        return redirect(url_for('student.task_view', task_id=task.id))
+                    matrix.append(sorted(picks))
+                content = json.dumps(matrix)
                 selected = list(map(int, request.form.getlist('answer')))
                 if not selected:
                     flash('Выберите хотя бы один вариант.', 'danger')
@@ -202,7 +240,7 @@ def task_view(task_id):
         sub=sub,
         task=task,
         submission=submission,
-        options=options,
+        questions=questions,
         overdue=overdue,
         graded=graded,
         locked=locked,

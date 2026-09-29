@@ -42,17 +42,24 @@
       <p class="mb-0" style="white-space: pre-wrap;">{{ task.description }}</p>
     {% endif %}
 
-    {% if task.task_type == 'test' and options %}
+    {% if task.task_type == 'test' and questions %}
       <hr>
-      <div class="small text-muted mb-1">Варианты теста:</div>
-      <ul class="mb-0">
-        {% for o in options %}
-          <li>
-            {{ o.text }}
-            {% if o.correct %}<span class="badge bg-success-subtle text-success-emphasis">правильный</span>{% endif %}
-          </li>
-        {% endfor %}
-      </ul>
+      <div class="small text-muted mb-2">Вопросы теста:</div>
+      {% for q in questions %}
+        <div class="mb-3">
+          <div class="fw-semibold mb-1">{{ loop.index }}. {{ q.text }}
+            <span class="text-muted small">({{ 'несколько' if q.type == 'multiple' else 'один' }})</span>
+          </div>
+          <ul class="mb-0 small">
+            {% for o in q.options %}
+              <li>
+                {{ o.text }}
+                {% if o.correct %}<span class="badge bg-success-subtle text-success-emphasis">правильный</span>{% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endfor %}
     {% endif %}
   </div>
 </div>

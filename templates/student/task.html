@@ -49,22 +49,25 @@
   <div class="card border-0 shadow-sm">
     <div class="card-body">
       <h2 class="h6 text-uppercase text-muted mb-3">Ваш ответ</h2>
-
       {% if task.task_type == 'test' %}
-        {% set selected = (submission.content|from_json) if submission and submission.content else [] %}
-        <ul class="mb-0">
-          {% for o in options %}
-            <li>
-              {{ o.text }}
-              {% if loop.index0 in selected %}
-                <span class="badge bg-primary-subtle text-primary-emphasis">ваш выбор</span>
-              {% endif %}
-              {% if o.correct %}
-                <span class="badge bg-success-subtle text-success-emphasis">правильный</span>
-              {% endif %}
-            </li>
-          {% endfor %}
-        </ul>
+        {% set matrix = (submission.content|from_json) if submission and submission.content else [] %}
+        {% for q in questions %}
+          {% set qi = loop.index0 %}
+          <div class="mb-3 pb-3 border-bottom">
+            <div class="fw-semibold mb-2">{{ loop.index }}. {{ q.text }}</div>
+            {% for o in q.options %}
+              <div class="small">
+                {{ o.text }}
+                {% if qi < matrix|length and loop.index0 in matrix[qi] %}
+                  <span class="badge bg-primary-subtle text-primary-emphasis">ваш выбор</span>
+                {% endif %}
+                {% if o.correct %}
+                  <span class="badge bg-success-subtle text-success-emphasis">правильный</span>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        {% endfor %}
       {% elif task.task_type == 'file' %}
         {% if submission and submission.file_url %}
           <a href="{{ submission.file_url }}" target="_blank" class="btn btn-outline-primary btn-sm">
@@ -136,21 +139,25 @@
           </div>
 
         {% elif task.task_type == 'test' %}
-          {% set selected = (submission.content|from_json) if submission and submission.content else [] %}
-          {% set multi = (options | selectattr('correct') | list | length) > 1 %}
-          <p class="text-muted small">
-            {{ 'Выберите несколько вариантов' if multi else 'Выберите один вариант' }}
-          </p>
-          <div class="mb-3">
-            {% for o in options %}
-              <div class="form-check">
-                <input class="form-check-input" type="{{ 'checkbox' if multi else 'radio' }}"
-                       name="answer" value="{{ loop.index0 }}" id="ans{{ loop.index0 }}"
-                       {{ 'checked' if loop.index0 in selected }}>
-                <label class="form-check-label" for="ans{{ loop.index0 }}">{{ o.text }}</label>
+          {% set matrix = (submission.content|from_json) if submission and submission.content else [] %}
+          {% for q in questions %}
+            {% set qi = loop.index0 %}
+            {% set multi = q.type == 'multiple' %}
+            <div class="mb-4">
+              <div class="fw-semibold mb-2">
+                {{ loop.index }}. {{ q.text }}
+                <span class="text-muted small">({{ 'несколько ответов' if multi else 'один ответ' }})</span>
               </div>
-            {% endfor %}
-          </div>
+              {% for o in q.options %}
+                <div class="form-check">
+                  <input class="form-check-input" type="{{ 'checkbox' if multi else 'radio' }}"
+                         name="q{{ qi }}" value="{{ loop.index0 }}" id="q{{ qi }}o{{ loop.index0 }}"
+                         {{ 'checked' if qi < matrix|length and loop.index0 in matrix[qi] }}>
+                  <label class="form-check-label" for="q{{ qi }}o{{ loop.index0 }}">{{ o.text }}</label>
+                </div>
+              {% endfor %}
+            </div>
+          {% endfor %}
         {% endif %}
 
         <button class="btn btn-primary">
