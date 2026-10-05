@@ -40,7 +40,7 @@
     </div>
     {% if task.description %}
       <hr>
-      <div style="white-space: pre-wrap;">{{ task.description }}</div>
+      <div class="quill-content">{{ task.description|safe }}</div>
     {% endif %}
   </div>
 </div>

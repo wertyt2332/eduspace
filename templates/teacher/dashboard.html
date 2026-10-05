@@ -2,7 +2,12 @@
 {% block title %}Кабинет учителя{% endblock %}
 
 {% block content %}
-<h1 class="h3 mb-4">Кабинет учителя</h1>
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+  <h1 class="h3 mb-0">Кабинет учителя</h1>
+  <a href="{{ url_for('teacher.backup_page') }}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-shield-check"></i> Бэкап
+  </a>
+</div>
 
 {% if sections %}
   <div class="row g-3">
@@ -27,7 +32,7 @@
   </div>
 {% else %}
   <div class="alert alert-info">
-    Вам пока не назначено ни одного раздела. Попросите администратора.
+    Вам пока не назначено ни одного раздела.
   </div>
 {% endif %}
 {% endblock %}

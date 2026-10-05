@@ -1,0 +1,53 @@
+{#
+  Хелпер: инициализация Quill на <div id="...">,
+  синхронизация в скрытый <input name="...">.
+  Параметры:
+    editor_id  — id элемента-контейнера
+    input_name — name скрытого input (куда сохранять HTML)
+    placeholder — плейсхолдер
+#}
+<script>
+  (function() {
+    const editorId = '{{ editor_id }}';
+    const inputName = '{{ input_name }}';
+    const placeholder = '{{ placeholder|default("") }}';
+
+    const container = document.getElementById(editorId);
+    if (!container) return;
+
+    // Создаём скрытый input рядом
+    const hidden = document.createElement('input');
+    hidden.type = 'hidden';
+    hidden.name = inputName;
+    container.parentNode.appendChild(hidden);
+
+    const quill = new Quill(container, {
+      theme: 'snow',
+      placeholder: placeholder,
+      modules: {
+        toolbar: [
+          [{ 'header': [1, 2, 3, false] }],
+          ['bold', 'italic', 'underline', 'strike'],
+          [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+          ['blockquote', 'code-block'],
+          ['link'],
+          ['clean']
+        ]
+      }
+    });
+
+    // Если было начальное значение — вставляем
+    const initial = {{ initial_html|safe if initial_html else '""' }};
+    if (initial) {
+      quill.clipboard.dangerouslyPasteHTML(initial);
+    }
+
+    // Форма — при отправке переносим HTML в скрытый input
+    const form = container.closest('form');
+    if (form) {
+      form.addEventListener('submit', () => {
+        hidden.value = quill.root.innerHTML;
+      });
+    }
+  })();
+</script>

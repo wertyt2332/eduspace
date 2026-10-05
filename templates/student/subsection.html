@@ -30,7 +30,7 @@
         </h5>
 
         {% if m.material_type == 'text' %}
-          <div style="white-space: pre-wrap;">{{ m.content }}</div>
+          <div class="quill-content">{{ m.content|safe }}</div>
 
         {% elif m.material_type == 'video' %}
           {% set embed = m.content|video_embed %}

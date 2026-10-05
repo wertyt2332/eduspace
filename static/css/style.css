@@ -1,3 +1,71 @@
 body { background: #f6f7f9; }
 .card { border-radius: .75rem; }
 .navbar-brand { letter-spacing: -.02em; }
+
+/* Quill */
+.ql-toolbar.ql-snow {
+  border-radius: .5rem .5rem 0 0;
+  border-color: #dee2e6;
+  background: #fafafa;
+}
+.ql-container.ql-snow {
+  border-radius: 0 0 .5rem .5rem;
+  border-color: #dee2e6;
+  font-size: 1rem;
+  font-family: inherit;
+}
+.ql-editor {
+  min-height: 120px;
+}
+
+/* Красивый вывод HTML от Quill */
+.quill-content p { margin-bottom: .5rem; }
+.quill-content h1 { font-size: 1.5rem; margin: 1rem 0 .5rem; }
+.quill-content h2 { font-size: 1.25rem; margin: 1rem 0 .5rem; }
+.quill-content h3 { font-size: 1.1rem; margin: 1rem 0 .5rem; }
+.quill-content ul, .quill-content ol { padding-left: 1.5rem; }
+.quill-content blockquote {
+  border-left: 3px solid #0d6efd;
+  padding-left: 1rem;
+  color: #555;
+  margin: 1rem 0;
+}
+.quill-content code {
+  background: #f1f3f5;
+  padding: .1rem .3rem;
+  border-radius: .25rem;
+}
+.quill-content pre {
+  background: #f8f9fa;
+  padding: 1rem;
+  border-radius: .5rem;
+  overflow-x: auto;
+}
+
+/* Quill */
+.ql-toolbar.ql-snow {
+  border-radius: .5rem .5rem 0 0;
+  border-color: #dee2e6;
+  background: #fafafa;
+}
+.ql-container.ql-snow {
+  border-radius: 0 0 .5rem .5rem;
+  border-color: #dee2e6;
+  font-size: 1rem;
+  font-family: inherit;
+}
+.ql-editor { min-height: 120px; }
+
+.quill-content p { margin-bottom: .5rem; }
+.quill-content h1 { font-size: 1.5rem; margin: 1rem 0 .5rem; }
+.quill-content h2 { font-size: 1.25rem; margin: 1rem 0 .5rem; }
+.quill-content h3 { font-size: 1.1rem; margin: 1rem 0 .5rem; }
+.quill-content ul, .quill-content ol { padding-left: 1.5rem; }
+.quill-content blockquote {
+  border-left: 3px solid #0d6efd;
+  padding-left: 1rem;
+  color: #555;
+  margin: 1rem 0;
+}
+.quill-content code { background: #f1f3f5; padding: .1rem .3rem; border-radius: .25rem; }
+.quill-content pre { background: #f8f9fa; padding: 1rem; border-radius: .5rem; overflow-x: auto; }

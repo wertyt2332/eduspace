@@ -17,3 +17,6 @@ class Config:
     SUPABASE_BUCKET = os.getenv('SUPABASE_BUCKET', 'uploads')
 
     MAX_CONTENT_LENGTH = 20 * 1024 * 1024  # 20 MB
+
+        # Quill-редактор
+    QUILL_ENABLED = True

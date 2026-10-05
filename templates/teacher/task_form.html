@@ -25,7 +25,7 @@
 
           <div class="mb-3">
             <label class="form-label">Описание / вопрос</label>
-            <textarea name="description" rows="3" class="form-control">{{ task.description if task else '' }}</textarea>
+            <div id="quill-task-desc" style="min-height: 120px; background: #fff;"></div>
           </div>
 
           <div class="row g-3 mb-3">
@@ -46,7 +46,7 @@
           </div>
 
           <div class="mb-3">
-            <label class="form-label">Дедлайн <span class="text-muted small">(оставь пустым — без дедлайна)</span></label>
+            <label class="form-label">Дедлайн <span class="text-muted small">(пусто — без дедлайна)</span></label>
             <input name="deadline" type="datetime-local" class="form-control"
                    value="{{ task.deadline.strftime('%Y-%m-%dT%H:%M') if task and task.deadline else '' }}">
           </div>
@@ -62,7 +62,7 @@
             <div id="questions-list"></div>
             <div class="alert alert-info small mb-0">
               <i class="bi bi-info-circle"></i>
-              Если в вопросе несколько правильных ответов — поставь несколько галочек. Если один — только одну.
+              Несколько правильных ответов — поставь несколько галочек.
             </div>
           </div>
 
@@ -75,27 +75,61 @@
     </div>
   </div>
 </div>
+{% endblock %}
 
+{% block scripts %}
 <script>
+  // ====== Quill для описания ======
+  (function() {
+    const container = document.getElementById('quill-task-desc');
+    if (!container) return;
+
+    const hidden = document.createElement('input');
+    hidden.type = 'hidden';
+    hidden.name = 'description';
+    container.parentNode.appendChild(hidden);
+
+    const quill = new Quill(container, {
+      theme: 'snow',
+      placeholder: 'Описание задания...',
+      modules: {
+        toolbar: [
+          [{ 'header': [1, 2, 3, false] }],
+          ['bold', 'italic', 'underline', 'strike'],
+          [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+          ['blockquote', 'code-block'],
+          ['link'],
+          ['clean']
+        ]
+      }
+    });
+
+    const initial = {{ (task.description|tojson) if task else '""' }};
+    if (initial) {
+      quill.clipboard.dangerouslyPasteHTML(initial);
+    }
+
+    const form = container.closest('form');
+    if (form) {
+      form.addEventListener('submit', () => {
+        hidden.value = quill.root.innerHTML;
+      });
+    }
+  })();
+
+  // ====== Тест ======
   const typeSel = document.getElementById('task_type');
   const testBlock = document.getElementById('test-block');
   const questionsList = document.getElementById('questions-list');
-
   let Q_COUNT = 0;
 
-  // Существующие вопросы (если редактируем тест)
   const existingQuestions = (() => {
     try {
       const raw = {{ (task.options_json|safe if task else '{}') or '{}' }};
       if (raw && typeof raw === 'object') {
         if (Array.isArray(raw.questions)) return raw.questions;
-        // старый формат
         if (Array.isArray(raw) && raw.length && 'correct' in raw[0]) {
-          return [{
-            text: 'Вопрос 1',
-            type: 'single',
-            options: raw,
-          }];
+          return [{ text: 'Вопрос 1', type: 'single', options: raw }];
         }
       }
     } catch (e) {}
@@ -104,6 +138,19 @@
 
   function esc(s) {
     return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function optionRow(qi, text = '', correct = false) {
+    const idx = Math.floor(Math.random() * 1e9);
+    return `
+      <div class="input-group input-group-sm mb-1">
+        <span class="input-group-text">
+          <input type="checkbox" name="q${qi}_opt_correct" value="${idx}" ${correct ? 'checked' : ''}>
+        </span>
+        <input name="q${qi}_opt_text" class="form-control" placeholder="Вариант" value="${esc(text)}">
+        <button type="button" class="btn btn-outline-danger" onclick="this.parentNode.remove()">×</button>
+      </div>
+    `;
   }
 
   function addQuestion(data) {
@@ -129,7 +176,7 @@
             <option value="multiple" ${data?.type === 'multiple' ? 'selected' : ''}>Несколько правильных</option>
           </select>
         </div>
-        <div class="small text-muted mb-1">Варианты ответа (галочка = правильный):</div>
+        <div class="small text-muted mb-1">Варианты (галочка = правильный):</div>
         <div class="q-options">${optsHtml}</div>
         <button type="button" class="btn btn-sm btn-outline-secondary"
                 onclick="this.previousElementSibling.insertAdjacentHTML('beforeend', optionRow(${qi}));">
@@ -141,41 +188,10 @@
     renumber();
   }
 
-  function optionRow(qi, text = '', correct = false) {
-    // значение — просто счётчик, но пересоберётся перед submit через fixOptionIndexes
-    const idx = document.querySelectorAll('.q-options .input-group').length;
-    return `
-      <div class="input-group input-group-sm mb-1">
-        <span class="input-group-text">
-          <input type="checkbox" name="q${qi}_opt_correct" value="${idx}" ${correct ? 'checked' : ''}>
-        </span>
-        <input name="q${qi}_opt_text" class="form-control" placeholder="Вариант" value="${esc(text)}">
-        <button type="button" class="btn btn-outline-danger" onclick="this.parentNode.remove()">×</button>
-      </div>
-    `;
-  }
-
-  // пересобираем индексы опций, чтобы value был 0,1,2,...
   function fixOptionIndexes(card) {
-    const qi = card.dataset.qIndex;
     card.querySelectorAll('.q-options .input-group').forEach((row, oi) => {
       row.querySelector('input[type=checkbox]').value = oi;
     });
-  }
-
-  // при добавлении строки через DOM (optionRow — вспомогательная)
-  function optionRow(qi, text = '', correct = false) {
-    // значение — просто счётчик, но пересоберётся перед submit через fixOptionIndexes
-    const idx = document.querySelectorAll('.q-options .input-group').length;
-    return `
-      <div class="input-group input-group-sm mb-1">
-        <span class="input-group-text">
-          <input type="checkbox" name="q${qi}_opt_correct" value="${idx}" ${correct ? 'checked' : ''}>
-        </span>
-        <input name="q${qi}_opt_text" class="form-control" placeholder="Вариант" value="${esc(text)}">
-        <button type="button" class="btn btn-outline-danger" onclick="this.parentNode.remove()">×</button>
-      </div>
-    `;
   }
 
   function renumber() {
@@ -184,7 +200,6 @@
     });
   }
 
-  // Перед отправкой: пересобираем value у чекбоксов опций (0,1,2 внутри каждого вопроса)
   document.getElementById('task-form').addEventListener('submit', () => {
     document.querySelectorAll('#questions-list > .card').forEach(card => {
       fixOptionIndexes(card);
@@ -200,7 +215,6 @@
 
   typeSel.addEventListener('change', toggleTest);
 
-  // Инициализация
   if (typeSel.value === 'test' && existingQuestions.length) {
     existingQuestions.forEach(q => addQuestion(q));
   }

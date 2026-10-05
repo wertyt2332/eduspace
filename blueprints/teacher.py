@@ -1,5 +1,6 @@
 import json
 from datetime import datetime
+from sanitize import sanitize_html
 from functools import wraps
 from flask import (
     Blueprint, render_template, abort, request,
@@ -131,7 +132,7 @@ def subsection_new(section_id):
     section = _own_section(section_id)
     if request.method == 'POST':
         title = request.form.get('title', '').strip()
-        description = request.form.get('description', '').strip()
+        description = sanitize_html(request.form.get('description', '').strip())
         if not title:
             flash('Название обязательно.', 'danger')
         else:
@@ -151,7 +152,7 @@ def subsection_edit(subsection_id):
     sub = _own_subsection(subsection_id)
     if request.method == 'POST':
         title = request.form.get('title', '').strip()
-        description = request.form.get('description', '').strip()
+        description = sanitize_html(request.form.get('description', '').strip())
         if not title:
             flash('Название обязательно.', 'danger')
         else:
@@ -192,7 +193,7 @@ def task_new(subsection_id):
     sub = _own_subsection(subsection_id)
     if request.method == 'POST':
         title = request.form.get('title', '').strip()
-        description = request.form.get('description', '').strip()
+        description = sanitize_html(request.form.get('description', '').strip())
         task_type = request.form.get('task_type', 'text')
         max_score = request.form.get('max_score', '5')
         deadline_raw = request.form.get('deadline', '')
@@ -244,7 +245,7 @@ def task_edit(task_id):
 
     if request.method == 'POST':
         title = request.form.get('title', '').strip()
-        description = request.form.get('description', '').strip()
+        description = sanitize_html(request.form.get('description', '').strip())
         task_type = request.form.get('task_type', task.task_type)
         max_score = request.form.get('max_score', str(task.max_score))
         deadline_raw = request.form.get('deadline', '')
@@ -428,7 +429,7 @@ def material_new(subsection_id):
     if request.method == 'POST':
         title = request.form.get('title', '').strip()
         material_type = request.form.get('material_type', 'text')
-        content = (request.form.get('content') or '').strip()
+        content = sanitize_html((request.form.get('content') or '').strip())
 
         if not title:
             flash('Название обязательно.', 'danger')
@@ -479,7 +480,7 @@ def material_edit(material_id):
     if request.method == 'POST':
         title = request.form.get('title', '').strip()
         material_type = request.form.get('material_type', mat.material_type)
-        content = (request.form.get('content') or '').strip()
+        content = sanitize_html((request.form.get('content') or '').strip())
 
         if not title:
             flash('Название обязательно.', 'danger')
@@ -534,3 +535,54 @@ def material_delete(material_id):
     db.session.commit()
     flash('Материал удалён.', 'info')
     return redirect(url_for('teacher.subsection_view', subsection_id=sub_id))
+
+
+
+
+# ---------- Бэкап учителя ----------
+
+@teacher_bp.route('/backup')
+@teacher_required
+def backup_page():
+    from backup import save_teacher_backup_to_supabase, load_teacher_backup_from_supabase
+
+    # информация о последнем бэкапе (если есть)
+    last = None
+    if current_user.is_teacher:
+        data, _ = load_teacher_backup_from_supabase(current_user.login)
+        if data:
+            last = data.get('exported_at')
+
+    return render_template('teacher/backup.html', last_backup=last)
+
+
+@teacher_bp.route('/backup/save_now', methods=['POST'])
+@teacher_required
+def backup_save_now():
+    from backup import save_teacher_backup_to_supabase
+    ok, result = save_teacher_backup_to_supabase(current_user.id)
+    if ok:
+        flash(f'Бэкап сохранён: {result}', 'success')
+    else:
+        flash(f'Ошибка: {result}', 'danger')
+    return redirect(url_for('teacher.backup_page'))
+
+
+@teacher_bp.route('/backup/download')
+@teacher_required
+def backup_download():
+    from flask import Response
+    from backup import dump_teacher_data
+    from datetime import datetime as dt
+
+    data = dump_teacher_data(current_user.id)
+    if not data:
+        abort(404)
+
+    payload = json.dumps(data, ensure_ascii=False, indent=2)
+    filename = f'eduspace_teacher_{current_user.login}_{dt.utcnow().strftime("%Y%m%d_%H%M")}.json'
+    return Response(
+        payload,
+        mimetype='application/json',
+        headers={'Content-Disposition': f'attachment; filename={filename}'}
+    )

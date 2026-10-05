@@ -247,6 +247,144 @@ def restore_from_dict(data, clear_first=False):
     return stats
 
 
+# ---------- Экспорт данных учителя ----------
+
+def dump_teacher_data(teacher_id):
+    """Собирает только данные, к которым у учителя есть доступ."""
+    from models import User as U
+    teacher = db.session.get(U, teacher_id)
+    if not teacher:
+        return None
+
+    sections = teacher.taught_sections
+    section_ids = [s.id for s in sections]
+    subsection_ids = [sub.id for s in sections for sub in s.subsections]
+    task_ids = [t.id for sub in Subsection.query.filter(
+        Subsection.section_id.in_(section_ids or [0])).all()
+        for t in sub.tasks]
+    material_ids = [m.id for sub in Subsection.query.filter(
+        Subsection.section_id.in_(section_ids or [0])).all()
+        for m in sub.materials]
+
+    return {
+        'version': 2,
+        'type': 'teacher_backup',
+        'teacher_login': teacher.login,
+        'exported_at': datetime.utcnow().isoformat(),
+        'sections': [
+            {
+                'id': s.id,
+                'title': s.title,
+                'description': s.description or '',
+                'is_visible': s.is_visible,
+                'created_at': _iso(s.created_at),
+                'student_logins': [st.login for st in s.students],
+            }
+            for s in sections
+        ],
+        'subsections': [
+            {
+                'id': sub.id,
+                'section_id': sub.section_id,
+                'title': sub.title,
+                'description': sub.description or '',
+                'order': sub.order,
+                'is_visible': sub.is_visible,
+                'created_at': _iso(sub.created_at),
+            }
+            for sub in Subsection.query.filter(
+                Subsection.section_id.in_(section_ids or [0])).all()
+        ],
+        'tasks': [
+            {
+                'id': t.id,
+                'subsection_id': t.subsection_id,
+                'title': t.title,
+                'description': t.description or '',
+                'task_type': t.task_type,
+                'max_score': t.max_score,
+                'deadline': _iso(t.deadline),
+                'is_visible': t.is_visible,
+                'order': t.order,
+                'options_json': t.options_json or '[]',
+                'created_at': _iso(t.created_at),
+            }
+            for t in Task.query.filter(Task.id.in_(task_ids or [0])).all()
+        ],
+        'materials': [
+            {
+                'id': m.id,
+                'subsection_id': m.subsection_id,
+                'title': m.title,
+                'material_type': m.material_type,
+                'content': m.content or '',
+                'file_url': m.file_url,
+                'order': m.order,
+                'is_visible': m.is_visible,
+                'created_at': _iso(m.created_at),
+            }
+            for m in Material.query.filter(Material.id.in_(material_ids or [0])).all()
+        ],
+        'submissions': [
+            {
+                'id': s.id,
+                'task_id': s.task_id,
+                'student_login': s.student.login if s.student else None,
+                'content': s.content or '',
+                'file_url': s.file_url,
+                'submitted_at': _iso(s.submitted_at),
+                'score': s.score,
+                'comment': s.comment or '',
+                'graded_at': _iso(s.graded_at),
+            }
+            for s in Submission.query.filter(
+                Submission.task_id.in_(task_ids or [0])
+            ).all()
+        ],
+    }
+
+
+def save_teacher_backup_to_supabase(teacher_id):
+    """Сохраняет бэкап учителя в Supabase как teacher_<login>.json."""
+    from storage import _supabase_client
+    client = _supabase_client()
+    if client is None:
+        return False, 'Supabase не настроен'
+
+    data = dump_teacher_data(teacher_id)
+    if not data:
+        return False, 'Учитель не найден'
+
+    filename = f'teacher_{data["teacher_login"]}.json'
+    payload = json.dumps(data, ensure_ascii=False).encode('utf-8')
+    bucket = current_app.config.get('SUPABASE_BUCKET', 'uploads')
+
+    try:
+        client.storage.from_(bucket).upload(
+            filename, payload,
+            {'content-type': 'application/json', 'upsert': 'true'}
+        )
+        return True, filename
+    except Exception as e:
+        return False, str(e)
+
+
+def load_teacher_backup_from_supabase(login):
+    """Скачивает teacher_<login>.json."""
+    from storage import _supabase_client
+    client = _supabase_client()
+    if client is None:
+        return None, 'Supabase не настроен'
+
+    filename = f'teacher_{login}.json'
+    bucket = current_app.config.get('SUPABASE_BUCKET', 'uploads')
+    try:
+        raw = client.storage.from_(bucket).download(filename)
+        return json.loads(raw.decode('utf-8')), None
+    except Exception as e:
+        return None, str(e)
+
+
 # ---------- Supabase ----------
 
 def save_to_supabase():

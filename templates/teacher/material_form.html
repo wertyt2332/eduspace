@@ -20,15 +20,14 @@
         <form method="post" enctype="multipart/form-data" id="mat-form">
           <div class="mb-3">
             <label class="form-label">Название</label>
-            <input name="title" class="form-control" required
-                   value="{{ material.title if material else '' }}">
+            <input name="title" class="form-control" required value="{{ material.title if material else '' }}">
           </div>
 
           <div class="mb-3">
             <label class="form-label">Тип материала</label>
             <select name="material_type" id="mat-type" class="form-select">
               <option value="text"  {{ 'selected' if material and material.material_type == 'text' }}>📄 Текст</option>
-              <option value="video" {{ 'selected' if material and material.material_type == 'video' }}>🎥 Видео (ссылка на YouTube/Vimeo/RuTube)</option>
+              <option value="video" {{ 'selected' if material and material.material_type == 'video' }}>🎥 Видео (ссылка)</option>
               <option value="link"  {{ 'selected' if material and material.material_type == 'link' }}>🔗 Внешняя ссылка</option>
               <option value="file"  {{ 'selected' if material and material.material_type == 'file' }}>📎 Файл</option>
             </select>
@@ -37,8 +36,7 @@
           {# text #}
           <div class="mb-3 mat-field" data-type="text">
             <label class="form-label">Текст</label>
-            <textarea name="content" rows="8" class="form-control"
-                      placeholder="Введите текст материала...">{{ material.content if material and material.material_type == 'text' else '' }}</textarea>
+            <div id="quill-text-editor" style="min-height: 200px; background: #fff;"></div>
           </div>
 
           {# video #}
@@ -47,7 +45,6 @@
             <input name="content" type="url" class="form-control"
                    placeholder="https://www.youtube.com/watch?v=..."
                    value="{{ material.content if material and material.material_type == 'video' else '' }}">
-            <div class="form-text">YouTube, Vimeo, RuTube — встроится автоматически.</div>
           </div>
 
           {# link #}
@@ -68,7 +65,7 @@
             {% endif %}
             <label class="form-label">{{ 'Заменить файл' if material and material.file_url else 'Файл' }}</label>
             <input name="file" type="file" class="form-control">
-            <div class="form-text">PDF, DOC, DOCX, TXT, RTF, ODT, JPG, PNG, GIF, WEBP. Макс. 20 МБ.</div>
+            <div class="form-text">PDF, DOC, DOCX, TXT, JPG, PNG. Макс. 20 МБ.</div>
           </div>
 
           <div class="d-flex gap-2">
@@ -80,32 +77,59 @@
     </div>
   </div>
 </div>
+{% endblock %}
 
+{% block scripts %}
 <script>
+  // --- Toggle по типам ---
   const sel = document.getElementById('mat-type');
   const fields = document.querySelectorAll('.mat-field');
-  const existingContent = {{ (material.content|tojson) if material else '""' }};
 
-  function update() {
+  function updateFields() {
     fields.forEach(f => {
       const active = f.dataset.type === sel.value;
       f.style.display = active ? 'block' : 'none';
-      // чтобы формы не мешали: убираем name у скрытых textarea/input (кроме file)
-      f.querySelectorAll('textarea, input').forEach(el => {
-        if (el.name === 'file') return;
-        if (active) el.setAttribute('name', el.dataset.origName || 'content');
-      });
     });
   }
+  sel.addEventListener('change', updateFields);
+  updateFields();
 
-  // запоминаем оригинальные name
-  fields.forEach(f => {
-    f.querySelectorAll('textarea, input').forEach(el => {
-      if (el.name === 'content') el.dataset.origName = 'content';
+  // --- Quill для текста ---
+  (function() {
+    const container = document.getElementById('quill-text-editor');
+    if (!container) return;
+
+    const hidden = document.createElement('input');
+    hidden.type = 'hidden';
+    hidden.name = 'content';
+    container.parentNode.appendChild(hidden);
+
+    const quill = new Quill(container, {
+      theme: 'snow',
+      placeholder: 'Введите текст материала...',
+      modules: {
+        toolbar: [
+          [{ 'header': [1, 2, 3, false] }],
+          ['bold', 'italic', 'underline', 'strike'],
+          [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+          ['blockquote', 'code-block'],
+          ['link'],
+          ['clean']
+        ]
+      }
     });
-  });
 
-  sel.addEventListener('change', update);
-  update();
+    const initial = {{ (material.content|tojson) if material and material.material_type == 'text' else '""' }};
+    if (initial) {
+      quill.clipboard.dangerouslyPasteHTML(initial);
+    }
+
+    const form = container.closest('form');
+    if (form) {
+      form.addEventListener('submit', () => {
+        hidden.value = quill.root.innerHTML;
+      });
+    }
+  })();
 </script>
 {% endblock %}

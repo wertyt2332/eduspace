@@ -39,7 +39,7 @@
     </div>
     {% if task.description %}
       <hr>
-      <p class="mb-0" style="white-space: pre-wrap;">{{ task.description }}</p>
+      <div class="quill-content">{{ task.description|safe }}</div>
     {% endif %}
 
     {% if task.task_type == 'test' and questions %}
