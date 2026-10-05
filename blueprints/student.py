@@ -89,13 +89,6 @@ def _grade_test(task, answer_matrix):
     if correct_count == len(questions):
         return task.max_score
     return int(round(correct_count / len(questions) * task.max_score))
-    """Автопроверка теста."""
-    questions = _get_questions(task)
-    correct = {i for i, o in enumerate(options) if o.get('correct')}
-    selected = set(selected_indexes)
-    if correct and correct == selected:
-        return task.max_score
-    return 0
 
 
 # ---------- Дашборд ----------
@@ -216,7 +209,7 @@ def task_view(task_id):
 
             # автопроверка теста
             if task.task_type == 'test':
-                submission.score = _grade_test(task, selected)
+                submission.score = _grade_test(task, matrix)
                 submission.comment = 'Автопроверка'
                 submission.graded_at = datetime.utcnow()
                 submission.graded_by_id = None
