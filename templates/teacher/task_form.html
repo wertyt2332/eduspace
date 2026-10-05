@@ -142,7 +142,8 @@
   }
 
   function optionRow(qi, text = '', correct = false) {
-    const idx = Math.floor(Math.random() * 1e9);
+    // значение — просто счётчик, но пересоберётся перед submit через fixOptionIndexes
+    const idx = document.querySelectorAll('.q-options .input-group').length;
     return `
       <div class="input-group input-group-sm mb-1">
         <span class="input-group-text">
@@ -164,7 +165,8 @@
 
   // при добавлении строки через DOM (optionRow — вспомогательная)
   function optionRow(qi, text = '', correct = false) {
-    const idx = Math.floor(Math.random() * 1e9);
+    // значение — просто счётчик, но пересоберётся перед submit через fixOptionIndexes
+    const idx = document.querySelectorAll('.q-options .input-group').length;
     return `
       <div class="input-group input-group-sm mb-1">
         <span class="input-group-text">
