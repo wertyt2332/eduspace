@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "exported_at": "2026-10-05T17:46:32.267042",
+  "exported_at": "2026-10-05T17:55:17.621520",
   "users": [
     {
       "id": 1,
@@ -120,7 +120,7 @@
       "subsection_id": 1,
       "title": "sdsd",
       "material_type": "text",
-      "content": "dsds",
+      "content": "<p><strong>нег import</strong></p>",
       "file_url": null,
       "order": 4,
       "is_visible": true,

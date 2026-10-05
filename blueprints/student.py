@@ -90,7 +90,7 @@ def _grade_test(task, answer_matrix):
         return task.max_score
     return int(round(correct_count / len(questions) * task.max_score))
     """Автопроверка теста."""
-    options = json.loads(task.options_json or '[]')
+    questions = _get_questions(task)
     correct = {i for i, o in enumerate(options) if o.get('correct')}
     selected = set(selected_indexes)
     if correct and correct == selected:
@@ -202,11 +202,6 @@ def task_view(task_id):
                         return redirect(url_for('student.task_view', task_id=task.id))
                     matrix.append(sorted(picks))
                 content = json.dumps(matrix)
-                selected = list(map(int, request.form.getlist('answer')))
-                if not selected:
-                    flash('Выберите хотя бы один вариант.', 'danger')
-                    return redirect(url_for('student.task_view', task_id=task.id))
-                content = json.dumps(sorted(selected))
 
             # создаём или обновляем
             if submission is None:
