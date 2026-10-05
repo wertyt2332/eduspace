@@ -12,3 +12,5 @@ uploads/
 .vscode/
 *.save
 render_dump.sql
+*.kate-swp
+.*.kate-swp

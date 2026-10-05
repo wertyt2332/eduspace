@@ -25,7 +25,9 @@
 
           <div class="mb-3">
             <label class="form-label">Описание / вопрос</label>
-            <div id="quill-task-desc" style="min-height: 120px; background: #fff;"></div>
+            <div id="quill-task-desc"
+                 data-initial="{{ task.description if task else '' }}"
+                 style="min-height: 120px; background: #fff;"></div>
           </div>
 
           <div class="row g-3 mb-3">
@@ -104,7 +106,7 @@
       }
     });
 
-    const initial = {{ (task.description|tojson) if task else '""' }};
+    const initial = container.dataset.initial || '';
     if (initial) {
       quill.clipboard.dangerouslyPasteHTML(initial);
     }

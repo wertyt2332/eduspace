@@ -36,7 +36,9 @@
           {# text #}
           <div class="mb-3 mat-field" data-type="text">
             <label class="form-label">Текст</label>
-            <div id="quill-text-editor" style="min-height: 200px; background: #fff;"></div>
+            <div id="quill-text-editor"
+                 data-initial="{{ material.content if material and material.material_type == 'text' else '' }}"
+                 style="min-height: 200px; background: #fff;"></div>
           </div>
 
           {# video #}
@@ -119,7 +121,7 @@
       }
     });
 
-    const initial = {{ (material.content|tojson) if material and material.material_type == 'text' else '""' }};
+    const initial = container.dataset.initial || '';
     if (initial) {
       quill.clipboard.dangerouslyPasteHTML(initial);
     }
