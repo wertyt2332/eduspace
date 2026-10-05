@@ -216,14 +216,6 @@ def task_new(subsection_id):
                     flash('Добавьте хотя бы один вопрос с 2+ вариантами и отмеченным правильным.', 'danger')
                     return render_template('teacher/task_form.html', section=sub.section, sub=sub, task=None)
                 options_json = json.dumps({'questions': questions}, ensure_ascii=False)
-                options = _parse_test_options(request.form)
-                if len(options) < 2:
-                    flash('В тесте нужно минимум 2 варианта.', 'danger')
-                    return render_template('teacher/task_form.html', section=sub.section, sub=sub, task=None)
-                if not any(o['correct'] for o in options):
-                    flash('Отметьте хотя бы один правильный вариант.', 'danger')
-                    return render_template('teacher/task_form.html', section=sub.section, sub=sub, task=None)
-                options_json = json.dumps(options, ensure_ascii=False)
 
             order = max([t.order for t in sub.tasks], default=0) + 1
             task = Task(
@@ -281,12 +273,6 @@ def task_edit(task_id):
                     task.options_json = json.dumps({'questions': questions}, ensure_ascii=False)
                 else:
                     flash('Тест: добавьте хотя бы один вопрос с 2+ вариантами и правильным ответом.', 'danger')
-                    return redirect(url_for('teacher.task_edit', task_id=task.id))
-                options = _parse_test_options(request.form)
-                if len(options) >= 2 and any(o['correct'] for o in options):
-                    task.options_json = json.dumps(options, ensure_ascii=False)
-                else:
-                    flash('Тест: нужно минимум 2 варианта и хотя бы один правильный.', 'danger')
                     return redirect(url_for('teacher.task_edit', task_id=task.id))
             else:
                 task.options_json = '[]'
